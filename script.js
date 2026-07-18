@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 
-// KONFIGURACJA FIREBASE
+// FIREBASE CONFIG
 
 const firebaseConfig = {
   apiKey: "AIzaSyCiEgW5qAv3a61k4F8gXlvSFinHapOY6vU",
@@ -24,8 +24,17 @@ const firebaseConfig = {
 // START FIREBASE
 
 const app = initializeApp(firebaseConfig);
-
 const db = getFirestore(app);
+
+
+// DŹWIĘK ALARMU
+
+const syrena = new Audio("SWD.wav");
+
+
+// TIMER 30 SEKUND
+
+let timerAlarmu = null;
 
 
 // ELEMENTY STRONY
@@ -34,8 +43,8 @@ const menu = document.getElementById("menu");
 const pinBox = document.getElementById("pinBox");
 const dyzurny = document.getElementById("dyzurnyPanel");
 const remiza = document.getElementById("remizaPanel");
-
 const alarmBox = document.getElementById("alarm");
+
 
 
 // UKRYWANIE OKIEN
@@ -50,6 +59,7 @@ function ukryj(){
 }
 
 
+
 // PANEL DYŻURNEGO
 
 document.getElementById("btnDyzurny").onclick = ()=>{
@@ -59,6 +69,7 @@ document.getElementById("btnDyzurny").onclick = ()=>{
     pinBox.classList.remove("hidden");
 
 };
+
 
 
 // E-REMIZA
@@ -72,10 +83,10 @@ document.getElementById("btnRemiza").onclick = ()=>{
 };
 
 
+
 // POWRÓT
 
 document.querySelectorAll(".back").forEach(btn=>{
-
 
     btn.onclick=()=>{
 
@@ -85,8 +96,8 @@ document.querySelectorAll(".back").forEach(btn=>{
 
     };
 
-
 });
+
 
 
 // LOGOWANIE PIN
@@ -114,12 +125,12 @@ document.getElementById("loginBtn").onclick=()=>{
 
     }
 
-
 };
 
 
 
-// WYSYŁANIE ALARMU
+
+// WYSŁANIE ALARMU
 
 document.getElementById("alarmBtn").onclick = async()=>{
 
@@ -148,7 +159,6 @@ document.getElementById("alarmBtn").onclick = async()=>{
         doc(db,"alarm","aktywny"),
         {
 
-
             rodzaj: rodzaj,
 
             lokalizacja: lokalizacja,
@@ -157,22 +167,17 @@ document.getElementById("alarmBtn").onclick = async()=>{
 
             godzina: godzina,
 
-            status: "aktywny"
-
+            status:"aktywny"
 
         });
 
 
 
-        alert("🚨 Alarm wysłany do OSP!");
+        alert("🚨 Alarm wysłany!");
 
-
-
-        // czyszczenie formularza
 
 
         document.getElementById("lokalizacja").value="";
-
         document.getElementById("opis").value="";
 
 
@@ -193,7 +198,10 @@ document.getElementById("alarmBtn").onclick = async()=>{
 
 
 
-// NASŁUCH ALARMÓW FIREBASE
+
+
+// ODBIERANIE ALARMU W CZASIE RZECZYWISTYM
+
 
 onSnapshot(
 doc(db,"alarm","aktywny"),
@@ -204,17 +212,7 @@ doc(db,"alarm","aktywny"),
     if(!snapshot.exists()){
 
 
-        alarmBox.innerHTML=`
-
-        <h3>
-        Brak aktywnego alarmu
-        </h3>
-
-        `;
-
-
-        alarmBox.classList.remove("alarm-active");
-
+        pokazBrakAlarmu();
 
         return;
 
@@ -226,7 +224,19 @@ doc(db,"alarm","aktywny"),
 
 
 
-    // JEŻELI ALARM AKTYWNY
+    if(d.status !== "aktywny"){
+
+
+        pokazBrakAlarmu();
+
+        return;
+
+    }
+
+
+
+
+    // POKAZANIE ALARMU
 
 
     alarmBox.innerHTML = `
@@ -269,15 +279,86 @@ doc(db,"alarm","aktywny"),
 
 
 
-    // automatyczne przejście do E-Remizy
+    // OTWARCIE E-REMIZY
+
+    menu.classList.add("hidden");
+    pinBox.classList.add("hidden");
+    dyzurny.classList.add("hidden");
 
     remiza.classList.remove("hidden");
 
 
-    menu.classList.add("hidden");
 
-    pinBox.classList.add("hidden");
+
+    // DŹWIĘK
+
+
+    syrena.currentTime = 0;
+
+
+    syrena.play().catch(error=>{
+
+        console.log(
+        "Przeglądarka zablokowała dźwięk",
+        error
+        );
+
+    });
+
+
+
+
+    // TIMER 30 SEKUND
+
+
+    if(timerAlarmu){
+
+        clearTimeout(timerAlarmu);
+
+    }
+
+
+
+    timerAlarmu = setTimeout(async()=>{
+
+
+        await setDoc(
+        doc(db,"alarm","aktywny"),
+        {
+
+            status:"brak"
+
+        });
+
+
+    },30000);
 
 
 
 });
+
+
+
+
+
+// FUNKCJA CZYSZCZENIA ALARMU
+
+
+function pokazBrakAlarmu(){
+
+
+    alarmBox.innerHTML = `
+
+
+    <h3>
+    Brak aktywnego alarmu
+    </h3>
+
+
+    `;
+
+
+    alarmBox.classList.remove("alarm-active");
+
+
+}
