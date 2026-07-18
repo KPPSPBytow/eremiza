@@ -27,7 +27,7 @@ const db = getFirestore(app);
 
 // DŹWIĘK
 
-const syrena = new Audio("SWD.wav.mp3");
+const syrena = new Audio("SWD.wav");
 
 let timerAlarmu = null;
 
