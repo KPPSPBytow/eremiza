@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 
-// FIREBASE CONFIG
+// FIREBASE
 
 const firebaseConfig = {
   apiKey: "AIzaSyCiEgW5qAv3a61k4F8gXlvSFinHapOY6vU",
@@ -22,13 +22,12 @@ const firebaseConfig = {
 
 
 const app = initializeApp(firebaseConfig);
-
 const db = getFirestore(app);
 
 
 // DŹWIĘK
 
-const syrena = new Audio("SWD.wav.mp3");
+const syrena = new Audio("SWD.wav");
 
 let timerAlarmu = null;
 
@@ -42,7 +41,7 @@ const remiza = document.getElementById("remizaPanel");
 const alarmBox = document.getElementById("alarm");
 
 
-// UKRYWANIE
+// UKRYWANIE OKIEN
 
 function ukryj(){
 
@@ -54,6 +53,7 @@ function ukryj(){
 }
 
 
+
 // PANEL DYŻURNEGO
 
 document.getElementById("btnDyzurny").onclick = ()=>{
@@ -63,6 +63,7 @@ document.getElementById("btnDyzurny").onclick = ()=>{
     pinBox.classList.remove("hidden");
 
 };
+
 
 
 // E-REMIZA
@@ -93,7 +94,7 @@ document.querySelectorAll(".back").forEach(btn=>{
 
 
 
-// LOGIN
+// LOGOWANIE DYŻURNEGO
 
 document.getElementById("loginBtn").onclick = ()=>{
 
@@ -101,7 +102,7 @@ document.getElementById("loginBtn").onclick = ()=>{
     const pin = document.getElementById("pin").value;
 
 
-    if(pin==="SKKPBytow"){
+    if(pin === "1234"){
 
 
         ukryj();
@@ -119,6 +120,7 @@ document.getElementById("loginBtn").onclick = ()=>{
     }
 
 };
+
 
 
 
@@ -151,10 +153,14 @@ document.getElementById("alarmBtn").onclick = async()=>{
         doc(db,"alarm","aktywny"),
         {
 
-            rodzaj,
-            lokalizacja,
-            opis,
-            godzina,
+            rodzaj: rodzaj,
+
+            lokalizacja: lokalizacja,
+
+            opis: opis,
+
+            godzina: godzina,
+
             status:"aktywny"
 
         });
@@ -167,7 +173,6 @@ document.getElementById("alarmBtn").onclick = async()=>{
 
         document.getElementById("lokalizacja").value="";
         document.getElementById("opis").value="";
-
 
 
     }catch(error){
@@ -187,7 +192,7 @@ document.getElementById("alarmBtn").onclick = async()=>{
 
 
 
-// ODBIÓR ALARMU
+// ODBIERANIE ALARMU FIREBASE
 
 onSnapshot(
 doc(db,"alarm","aktywny"),
@@ -260,23 +265,31 @@ doc(db,"alarm","aktywny"),
 
 
 
-    // DŹWIĘK
+    // DŹWIĘK TYLKO DLA E-REMIZY
 
-    syrena.currentTime = 0;
-
-
-    syrena.play().catch(error=>{
-
-        console.log(
-        "Dźwięk zablokowany przez przeglądarkę",
-        error
-        );
-
-    });
+    if(!remiza.classList.contains("hidden")){
 
 
+        syrena.currentTime = 0;
 
-    // AUTOMATYCZNE USUNIĘCIE PO 30 SEKUNDACH
+
+        syrena.play().catch(error=>{
+
+            console.log(
+            "Dźwięk zablokowany przez przeglądarkę",
+            error
+            );
+
+        });
+
+    }
+
+
+
+
+
+    // USUNIĘCIE ALARMU PO 30 SEKUNDACH
+
 
     if(timerAlarmu){
 
