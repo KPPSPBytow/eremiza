@@ -101,7 +101,7 @@ document.getElementById("loginBtn").onclick = ()=>{
     const pin = document.getElementById("pin").value;
 
 
-    if(pin==="1234"){
+    if(pin==="SKKPBytow"){
 
 
         ukryj();
