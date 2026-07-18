@@ -1,27 +1,41 @@
 <!DOCTYPE html>
 <html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Remiza</title>
 
-    <link rel="stylesheet" href="style.css">
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>E-Remiza OSP</title>
+
+<link rel="stylesheet" href="style.css">
+
 </head>
+
 <body>
 
 <header>
-    <h1>🚒 SYSTEM ALARMOWANIA OSP</h1>
+
+<h1>🚒 SYSTEM ALARMOWANIA OSP 🚒</h1>
+
 </header>
 
-<div class="menu" id="menu">
+<!-- MENU -->
 
-    <button id="btnDyzurny">
-        👮 Panel Dyżurnego
-    </button>
+<div id="menu" class="menu">
 
-    <button id="btnRemiza">
-        🚒 E-remiza
-    </button>
+<button id="btnDyzurny">
+
+👮 Panel Dyżurnego
+
+</button>
+
+<button id="btnRemiza">
+
+🚒 E-Remiza
+
+</button>
 
 </div>
 
@@ -29,24 +43,26 @@
 
 <div id="pinBox" class="okno hidden">
 
-    <h2>Logowanie</h2>
+<h2>Logowanie Dyżurnego</h2>
 
-    <input
-        type="password"
-        id="pin"
-        placeholder="Podaj PIN">
+<input
+type="password"
+id="pin"
+placeholder="Podaj PIN">
 
-    <br>
+<button id="loginBtn">
 
-    <button id="loginBtn">
-        Zaloguj
-    </button>
+Zaloguj
 
-    <button class="back">
-        Powrót
-    </button>
+</button>
 
-    <p id="loginError"></p>
+<button class="back">
+
+Powrót
+
+</button>
+
+<p id="loginError"></p>
 
 </div>
 
@@ -54,45 +70,59 @@
 
 <div id="dyzurnyPanel" class="okno hidden">
 
-    <h2>Nowe zdarzenie</h2>
+<h2>Nowe Zdarzenie</h2>
 
-    <label>Rodzaj zdarzenia</label>
+<label>
 
-    <select id="rodzaj">
+Rodzaj zdarzenia
 
-        <option>MZ</option>
+</label>
 
-        <option>P</option>
+<select id="rodzaj">
 
-        <option>PNZR</option>
+<option>MZ</option>
 
-        <option>Ć</option>
+<option>P</option>
 
-    </select>
+<option>PNZR</option>
 
-    <label>Lokalizacja</label>
+<option>Ć</option>
 
-    <input
-        type="text"
-        id="lokalizacja">
+</select>
 
-    <label>Opis</label>
+<label>
 
-    <textarea
-        id="opis"
-        rows="6"></textarea>
+Lokalizacja
 
-    <button id="alarmBtn">
+</label>
 
-        🚨 Alarmuj OSP
+<input
+type="text"
+id="lokalizacja"
+placeholder="np. Warszawa ul. Leśna 12">
 
-    </button>
+<label>
 
-    <button class="back">
+Opis
 
-        Powrót
+</label>
 
-    </button>
+<textarea
+id="opis"
+rows="6"
+placeholder="Opis zdarzenia..."></textarea>
+
+<button id="alarmBtn">
+
+🚨 Alarmuj OSP
+
+</button>
+
+<button class="back">
+
+Powrót
+
+</button>
 
 </div>
 
@@ -100,68 +130,38 @@
 
 <div id="remizaPanel" class="okno hidden">
 
-    <h2>E-Remiza</h2>
+<h2>E-Remiza</h2>
 
-    <div id="alarm">
+<div id="alarm">
 
-        <h3>Brak aktywnego alarmu</h3>
+<h3>
 
-    </div>
+Brak aktywnego alarmu
 
-    <button class="back">
-
-        Powrót
-
-    </button>
+</h3>
 
 </div>
 
-<!-- Firebase -->
+<button class="back">
 
-<script type="module">
+Powrót
 
-import { initializeApp }
-from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+</button>
 
-import {
-getFirestore,
-doc,
-setDoc,
-onSnapshot
+</div>
+
+<!-- Import map dla Firebase -->
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"
+  }
 }
-from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-
-const firebaseConfig = {
-
-apiKey: "TUTAJ_API_KEY",
-
-authDomain: "TUTAJ_AUTHDOMAIN",
-
-projectId: "TUTAJ_PROJECTID",
-
-storageBucket: "TUTAJ_STORAGE",
-
-messagingSenderId: "TUTAJ_SENDER",
-
-appId: "TUTAJ_APPID"
-
-};
-
-const app = initializeApp(firebaseConfig);
-
-const db = getFirestore(app);
-
-window.db = db;
-
-window.doc = doc;
-
-window.setDoc = setDoc;
-
-window.onSnapshot = onSnapshot;
-
 </script>
 
-<script src="script.js"></script>
+<!-- Główny skrypt -->
+<script type="module" src="script.js"></script>
 
 </body>
 </html>
