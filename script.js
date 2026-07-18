@@ -32,6 +32,12 @@ const syrena = new Audio("SWD.wav");
 let timerAlarmu = null;
 
 
+// OKREŚLENIE TRYBU STRONY
+
+let trybStrony = "menu";
+
+
+
 // ELEMENTY
 
 const menu = document.getElementById("menu");
@@ -41,7 +47,8 @@ const remiza = document.getElementById("remizaPanel");
 const alarmBox = document.getElementById("alarm");
 
 
-// UKRYWANIE OKIEN
+
+// UKRYWANIE
 
 function ukryj(){
 
@@ -54,25 +61,37 @@ function ukryj(){
 
 
 
-// PANEL DYŻURNEGO
+// WEJŚCIE PANEL DYŻURNEGO
 
 document.getElementById("btnDyzurny").onclick = ()=>{
 
+
+    trybStrony = "dyzurny";
+
+
     ukryj();
 
+
     pinBox.classList.remove("hidden");
+
 
 };
 
 
 
-// E-REMIZA
+// WEJŚCIE E-REMIZA
 
 document.getElementById("btnRemiza").onclick = ()=>{
 
+
+    trybStrony = "remiza";
+
+
     ukryj();
 
+
     remiza.classList.remove("hidden");
+
 
 };
 
@@ -82,19 +101,27 @@ document.getElementById("btnRemiza").onclick = ()=>{
 
 document.querySelectorAll(".back").forEach(btn=>{
 
+
     btn.onclick=()=>{
+
+
+        trybStrony = "menu";
+
 
         ukryj();
 
+
         menu.classList.remove("hidden");
 
+
     };
+
 
 });
 
 
 
-// LOGOWANIE DYŻURNEGO
+// LOGOWANIE
 
 document.getElementById("loginBtn").onclick = ()=>{
 
@@ -102,15 +129,20 @@ document.getElementById("loginBtn").onclick = ()=>{
     const pin = document.getElementById("pin").value;
 
 
-    if(pin === "1234"){
+    if(pin === "SKKPBytow"){
 
 
         ukryj();
 
+
         dyzurny.classList.remove("hidden");
 
 
-    }else{
+        trybStrony = "dyzurny";
+
+
+    }
+    else{
 
 
         document.getElementById("loginError").innerHTML =
@@ -119,7 +151,9 @@ document.getElementById("loginBtn").onclick = ()=>{
 
     }
 
+
 };
+
 
 
 
@@ -153,6 +187,7 @@ document.getElementById("alarmBtn").onclick = async()=>{
         doc(db,"alarm","aktywny"),
         {
 
+
             rodzaj: rodzaj,
 
             lokalizacja: lokalizacja,
@@ -162,6 +197,7 @@ document.getElementById("alarmBtn").onclick = async()=>{
             godzina: godzina,
 
             status:"aktywny"
+
 
         });
 
@@ -175,7 +211,9 @@ document.getElementById("alarmBtn").onclick = async()=>{
         document.getElementById("opis").value="";
 
 
-    }catch(error){
+
+    }
+    catch(error){
 
 
         console.error(error);
@@ -192,7 +230,9 @@ document.getElementById("alarmBtn").onclick = async()=>{
 
 
 
-// ODBIERANIE ALARMU FIREBASE
+
+
+// NASŁUCH FIREBASE
 
 onSnapshot(
 doc(db,"alarm","aktywny"),
@@ -202,9 +242,11 @@ doc(db,"alarm","aktywny"),
 
     if(!snapshot.exists()){
 
+
         pokazBrakAlarmu();
 
         return;
+
 
     }
 
@@ -221,7 +263,9 @@ doc(db,"alarm","aktywny"),
 
         return;
 
+
     }
+
 
 
 
@@ -265,9 +309,11 @@ doc(db,"alarm","aktywny"),
 
 
 
-    // DŹWIĘK TYLKO DLA E-REMIZY
 
-    if(!remiza.classList.contains("hidden")){
+
+    // DŹWIĘK TYLKO E-REMIZA
+
+    if(trybStrony === "remiza"){
 
 
         syrena.currentTime = 0;
@@ -275,12 +321,15 @@ doc(db,"alarm","aktywny"),
 
         syrena.play().catch(error=>{
 
+
             console.log(
             "Dźwięk zablokowany przez przeglądarkę",
             error
             );
 
+
         });
+
 
     }
 
@@ -288,8 +337,8 @@ doc(db,"alarm","aktywny"),
 
 
 
-    // USUNIĘCIE ALARMU PO 30 SEKUNDACH
 
+    // USUNIĘCIE PO 30 SEKUNDACH
 
     if(timerAlarmu){
 
@@ -306,7 +355,9 @@ doc(db,"alarm","aktywny"),
         doc(db,"alarm","aktywny"),
         {
 
+
             status:"brak"
+
 
         });
 
@@ -321,6 +372,7 @@ doc(db,"alarm","aktywny"),
 
 
 
+
 // BRAK ALARMU
 
 function pokazBrakAlarmu(){
@@ -328,9 +380,11 @@ function pokazBrakAlarmu(){
 
     alarmBox.innerHTML = `
 
+
     <h3>
     Brak aktywnego alarmu
     </h3>
+
 
     `;
 
