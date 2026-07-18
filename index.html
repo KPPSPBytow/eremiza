@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Remiza</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>🚒 SYSTEM ALARMOWANIA OSP</h1>
+</header>
+
+<div class="menu" id="menu">
+
+    <button id="btnDyzurny">
+        👮 Panel Dyżurnego
+    </button>
+
+    <button id="btnRemiza">
+        🚒 E-remiza
+    </button>
+
+</div>
+
+<!-- PIN -->
+
+<div id="pinBox" class="okno hidden">
+
+    <h2>Logowanie</h2>
+
+    <input
+        type="password"
+        id="pin"
+        placeholder="Podaj PIN">
+
+    <br>
+
+    <button id="loginBtn">
+        Zaloguj
+    </button>
+
+    <button class="back">
+        Powrót
+    </button>
+
+    <p id="loginError"></p>
+
+</div>
+
+<!-- PANEL DYŻURNEGO -->
+
+<div id="dyzurnyPanel" class="okno hidden">
+
+    <h2>Nowe zdarzenie</h2>
+
+    <label>Rodzaj zdarzenia</label>
+
+    <select id="rodzaj">
+
+        <option>MZ</option>
+
+        <option>P</option>
+
+        <option>PNZR</option>
+
+        <option>Ć</option>
+
+    </select>
+
+    <label>Lokalizacja</label>
+
+    <input
+        type="text"
+        id="lokalizacja">
+
+    <label>Opis</label>
+
+    <textarea
+        id="opis"
+        rows="6"></textarea>
+
+    <button id="alarmBtn">
+
+        🚨 Alarmuj OSP
+
+    </button>
+
+    <button class="back">
+
+        Powrót
+
+    </button>
+
+</div>
+
+<!-- E-REMIZA -->
+
+<div id="remizaPanel" class="okno hidden">
+
+    <h2>E-Remiza</h2>
+
+    <div id="alarm">
+
+        <h3>Brak aktywnego alarmu</h3>
+
+    </div>
+
+    <button class="back">
+
+        Powrót
+
+    </button>
+
+</div>
+
+<!-- Firebase -->
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+import {
+getFirestore,
+doc,
+setDoc,
+onSnapshot
+}
+from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+
+apiKey: "TUTAJ_API_KEY",
+
+authDomain: "TUTAJ_AUTHDOMAIN",
+
+projectId: "TUTAJ_PROJECTID",
+
+storageBucket: "TUTAJ_STORAGE",
+
+messagingSenderId: "TUTAJ_SENDER",
+
+appId: "TUTAJ_APPID"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+window.db = db;
+
+window.doc = doc;
+
+window.setDoc = setDoc;
+
+window.onSnapshot = onSnapshot;
+
+</script>
+
+<script src="script.js"></script>
+
+</body>
+</html>
