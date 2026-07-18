@@ -8,19 +8,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
-
-    apiKey: "TUTAJ_API_KEY",
-
-    authDomain: "TUTAJ_AUTHDOMAIN",
-
-    projectId: "TUTAJ_PROJECTID",
-
-    storageBucket: "TUTAJ_STORAGE",
-
-    messagingSenderId: "TUTAJ_SENDER",
-
-    appId: "TUTAJ_APPID"
-
+  apiKey: "AIzaSyCiEgW5qAv3a61k4F8gXlvSFinHapOY6vU",
+  authDomain: "eremiza.firebaseapp.com",
+  projectId: "eremiza",
+  storageBucket: "eremiza.firebasestorage.app",
+  messagingSenderId: "304527774904",
+  appId: "1:304527774904:web:e32d405d1ef339b190904d",
+  measurementId: "G-Y7LWEKCF4H"
 };
 
 const app = initializeApp(firebaseConfig);
