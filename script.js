@@ -57,7 +57,7 @@ const historiaBox = document.getElementById("historiaAlarmow");
 function ukryj(){
 
     menu.classList.add("hidden");
-    pinBox.classList.add("hidden");
+    Box.classList.add("hidden");
     dyzurny.classList.add("hidden");
     remiza.classList.add("hidden");
 
@@ -72,7 +72,7 @@ document.getElementById("btnDyzurny").onclick = ()=>{
 
     ukryj();
 
-    pinBox.classList.remove("hidden");
+    Box.classList.remove("hidden");
 
 };
 
