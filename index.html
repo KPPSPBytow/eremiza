@@ -130,27 +130,46 @@ Powrót
 
 <div id="remizaPanel" class="okno hidden">
 
-<h2>E-Remiza</h2>
+    <h2>🚒 E-Remiza</h2>
 
-<div id="alarm">
+    <!-- AKTYWNY ALARM -->
 
-<h3>
+    <div id="alarm">
 
-Brak aktywnego alarmu
+        <h3>
 
-</h3>
+            Brak aktywnego alarmu
 
-</div>
+        </h3>
 
-<button class="back">
+    </div>
 
-Powrót
+    <hr style="margin:30px 0;border:1px solid #444;">
 
-</button>
+    <!-- HISTORIA ALARMÓW -->
+
+    <h2>📜 Historia alarmów</h2>
+
+    <div id="historiaAlarmow">
+
+        <div class="historia-pusta">
+
+            Brak zapisanych alarmów.
+
+        </div>
+
+    </div>
+
+    <button class="back">
+
+        Powrót
+
+    </button>
 
 </div>
 
 <!-- Import map dla Firebase -->
+
 <script type="importmap">
 {
   "imports": {
@@ -161,6 +180,7 @@ Powrót
 </script>
 
 <!-- Główny skrypt -->
+
 <script type="module" src="script.js"></script>
 
 </body>
