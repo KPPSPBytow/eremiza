@@ -393,3 +393,155 @@ function pokazBrakAlarmu(){
 
 
 }
+
+// NASŁUCH AKTYWNEGO ALARMU
+
+onSnapshot(
+    doc(db, "alarm", "aktywny"),
+    (snapshot) => {
+
+        if (!snapshot.exists()) {
+
+            pokazBrakAlarmu();
+            return;
+
+        }
+
+        const d = snapshot.data();
+
+        if (d.status !== "aktywny") {
+
+            pokazBrakAlarmu();
+            return;
+
+        }
+
+        alarmBox.innerHTML = `
+
+        <h2>🚨 NOWE ZDARZENIE 🚨</h2>
+
+        <p><b>Rodzaj:</b> ${d.rodzaj}</p>
+
+        <p><b>Data:</b> ${d.data}</p>
+
+        <p><b>Godzina:</b> ${d.godzina}</p>
+
+        <p><b>Lokalizacja:</b><br>${d.lokalizacja}</p>
+
+        <p><b>Opis:</b><br>${d.opis}</p>
+
+        `;
+
+        alarmBox.classList.add("alarm-active");
+
+
+        // DŹWIĘK TYLKO W E-REMIZIE
+
+        if (trybStrony === "remiza") {
+
+            syrena.currentTime = 0;
+
+            syrena.play().catch(() => {});
+
+        }
+
+
+        // USUNIĘCIE AKTYWNEGO ALARMU PO 30 SEKUNDACH
+
+        if (timerAlarmu) {
+
+            clearTimeout(timerAlarmu);
+
+        }
+
+        timerAlarmu = setTimeout(async () => {
+
+            await setDoc(
+                doc(db, "alarm", "aktywny"),
+                {
+                    status: "brak"
+                }
+            );
+
+        }, 30000);
+
+    }
+);
+
+
+
+// HISTORIA ALARMÓW
+
+const historiaQuery = query(
+
+    collection(db, "historia"),
+
+    orderBy("timestamp", "desc"),
+
+    limit(50)
+
+);
+
+onSnapshot(historiaQuery, (snapshot) => {
+
+    if (snapshot.empty) {
+
+        historiaBox.innerHTML = "<p>Brak zapisanych alarmów.</p>";
+
+        return;
+
+    }
+
+    let html = "";
+
+    snapshot.forEach((doc) => {
+
+        const d = doc.data();
+
+        html += `
+
+        <div style="
+            background:#2f2f2f;
+            margin-bottom:15px;
+            padding:15px;
+            border-left:6px solid #d60000;
+            border-radius:10px;
+        ">
+
+            <b>🚨 ${d.rodzaj}</b><br>
+
+            📅 ${d.data} ${d.godzina}<br><br>
+
+            📍 ${d.lokalizacja}<br><br>
+
+            📝 ${d.opis}
+
+        </div>
+
+        `;
+
+    });
+
+    historiaBox.innerHTML = html;
+
+});
+
+
+
+// BRAK AKTYWNEGO ALARMU
+
+function pokazBrakAlarmu() {
+
+    alarmBox.innerHTML = `
+
+    <h3>
+
+        Brak aktywnego alarmu
+
+    </h3>
+
+    `;
+
+    alarmBox.classList.remove("alarm-active");
+
+}
