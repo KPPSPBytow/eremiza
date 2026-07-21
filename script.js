@@ -27,6 +27,46 @@ let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
 let odebraneAlarmy = [];
 
+// LISTY PODRODZAJÓW ZDARZEŃ
+const podrodzajeMZ = [
+    "Atmosferyczne",
+    "Budowlane",
+    "Chemiczne",
+    "Drogowe",
+    "Inne MZ",
+    "Kolejowe",
+    "Kolizja",
+    "Lotnicze",
+    "Palenie ognisk w miejscach niedozwolonych",
+    "Podejrzenie podłożenia ładunku",
+    "Pomoc innym służbom",
+    "Pomoc Policji",
+    "Pomoc PRM",
+    "Pomoc w otwarciu mieszkania, podejrzenie zgonu",
+    "Poszukiwanie osób zaginionych",
+    "Próba samobójcza",
+    "Sanitarno-epidemiologiczne",
+    "Topienie się",
+    "Wodne",
+    "Zabezpieczenie ładunku",
+    "Zwierzęta"
+];
+
+const podrodzajeP = [
+    "Inne pożary",
+    "Instytucje, obiekty użyteczności publicznej",
+    "Obiekty gospodarcze i inne rolnicze",
+    "Obiekty magazynowe, place składowe",
+    "Obiekty mieszkalne",
+    "Obiekty produkcyjne, instalacje technologiczne, rurociągi, urządzenia",
+    "Śmietniki, wysypiska",
+    "Środki transportu drogowego",
+    "Środki transportu kolejowego",
+    "Środki transportu lotniczego",
+    "Środki transportu wodnego",
+    "Trawy, torfowiska, lasy, pola, stogi"
+];
+
 // ELEMENTY DOM
 const menu = document.getElementById("menu");
 const pinBox = document.getElementById("pinBox");
@@ -34,6 +74,36 @@ const dyzurny = document.getElementById("dyzurnyPanel");
 const remiza = document.getElementById("remizaPanel");
 const alarmBox = document.getElementById("alarm");
 const historiaBox = document.getElementById("historiaAlarmow");
+
+const selectRodzaj = document.getElementById("rodzaj");
+const selectPodrodzaj = document.getElementById("podrodzaj");
+
+// FUNKCJA DYNAMICZNIE ŁADOWANIA PODRODZAJÓW
+function aktualizujPodrodzaje() {
+    const wypranyRodzaj = selectRodzaj.value;
+    selectPodrodzaj.innerHTML = ""; // Czyścimy listę
+
+    let opcje = [];
+    if (wypranyRodzaj === "MZ") {
+        opcje = podrodzajeMZ;
+    } else if (wypranyRodzaj === "P") {
+        opcje = podrodzajeP;
+    } else {
+        opcje = ["Standardowe"];
+    }
+
+    opcje.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item;
+        opt.textContent = item;
+        selectPodrodzaj.appendChild(opt);
+    });
+}
+
+// Reagujemy na zmianę wyboru w polach wyboru rodzaju
+selectRodzaj.addEventListener("change", aktualizujPodrodzaje);
+// Inicjalizujemy listę na start
+aktualizujPodrodzaje();
 
 function ukryj() {
     menu.classList.add("hidden");
@@ -93,7 +163,8 @@ function getObecnaDataGodzina() {
 
 // WYSYŁANIE ALARMU
 document.getElementById("alarmBtn").onclick = async () => {
-    const rodzaj = document.getElementById("rodzaj").value;
+    const rodzaj = selectRodzaj.value;
+    const podrodzaj = selectPodrodzaj.value;
     const lokalizacja = document.getElementById("lokalizacja").value.trim();
     const opis = document.getElementById("opis").value.trim();
     
@@ -108,6 +179,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     try {
         await addDoc(collection(db, "alarmy"), {
             rodzaj: rodzaj,
+            podrodzaj: podrodzaj,
             lokalizacja: lokalizacja,
             opis: opis,
             czasNadania: czasNadania,
@@ -143,7 +215,7 @@ onSnapshot(
     }
 );
 
-// SPRAWDZANIE WYGASANIA ALARMU CO 1 SEKUNDĘ
+// AUTOMATYCZNE SPRAWDZANIE ODSTĘPU CZASU CO 1 SEKUNDĘ
 setInterval(() => {
     if (odebraneAlarmy.length > 0) {
         renderujEremize();
@@ -182,7 +254,7 @@ function renderujEremize() {
 
         alarmBox.innerHTML = `
             <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
-            <p><b>Rodzaj:</b> ${aktywnyZdarzenie.rodzaj}</p>
+            <p><b>Rodzaj:</b> ${aktywnyZdarzenie.rodzaj} ${aktywnyZdarzenie.podrodzaj ? '(' + aktywnyZdarzenie.podrodzaj + ')' : ''}</p>
             <p><b>Lokalizacja:</b><br>${aktywnyZdarzenie.lokalizacja}</p>
             <p><b>Opis:</b><br>${aktywnyZdarzenie.opis || "Brak opisu"}</p>
             <p><b>Data i godzina:</b> ${wyswietlanyCzas}</p>
@@ -198,17 +270,18 @@ function renderujEremize() {
         wylaczActiveAlarm();
     }
 
-    // --- RENDEROWANIE ESTETYCZNEJ HISTORII ---
+    // --- RENDEROWANIE HISTORII ---
     if (historiaZdarzen.length === 0) {
         historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
     } else {
         historiaBox.innerHTML = historiaZdarzen.map(item => {
             const czasItem = item.czasNadania || "Brak daty";
+            const podrodzajTekst = item.podrodzaj ? ` - ${item.podrodzaj}` : '';
 
             return `
                 <div class="historia-item">
                     <div class="historia-naglowek">
-                        <span class="historia-rodzaj">${item.rodzaj}</span>
+                        <span class="historia-rodzaj">${item.rodzaj}${podrodzajTekst}</span>
                         <span class="historia-czas">⏰ ${czasItem}</span>
                     </div>
                     <h4>📍 ${item.lokalizacja}</h4>
