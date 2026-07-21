@@ -3,6 +3,8 @@ import {
     getFirestore,
     collection,
     addDoc,
+    doc,
+    updateDoc,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -27,44 +29,29 @@ let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
 let odebraneAlarmy = [];
 
+// IDENTYFIKATOR UŻYTKOWNIKA (Żeby pamiętać jego wybór na telefonie)
+let myUserId = localStorage.getItem("strazak_id");
+if (!myUserId) {
+    myUserId = "strazak_" + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem("strazak_id", myUserId);
+}
+
 // LISTY PODRODZAJÓW ZDARZEŃ
 const podrodzajeMZ = [
-    "Atmosferyczne",
-    "Budowlane",
-    "Chemiczne",
-    "Drogowe",
-    "Inne MZ",
-    "Kolejowe",
-    "Kolizja",
-    "Lotnicze",
-    "Palenie ognisk w miejscach niedozwolonych",
-    "Podejrzenie podłożenia ładunku",
-    "Pomoc innym służbom",
-    "Pomoc Policji",
-    "Pomoc PRM",
-    "Pomoc w otwarciu mieszkania, podejrzenie zgonu",
-    "Poszukiwanie osób zaginionych",
-    "Próba samobójcza",
-    "Sanitarno-epidemiologiczne",
-    "Topienie się",
-    "Wodne",
-    "Zabezpieczenie ładunku",
-    "Zwierzęta"
+    "Atmosferyczne", "Budowlane", "Chemiczne", "Drogowe", "Inne MZ", "Kolejowe",
+    "Kolizja", "Lotnicze", "Palenie ognisk w miejscach niedozwolonych",
+    "Podejrzenie podłożenia ładunku", "Pomoc innym służbom", "Pomoc Policji",
+    "Pomoc PRM", "Pomoc w otwarciu mieszkania, podejrzenie zgonu",
+    "Poszukiwanie osób zaginionych", "Próba samobójcza", "Sanitarno-epidemiologiczne",
+    "Topienie się", "Wodne", "Zabezpieczenie ładunku", "Zwierzęta"
 ];
 
 const podrodzajeP = [
-    "Inne pożary",
-    "Instytucje, obiekty użyteczności publicznej",
-    "Obiekty gospodarcze i inne rolnicze",
-    "Obiekty magazynowe, place składowe",
-    "Obiekty mieszkalne",
+    "Inne pożary", "Instytucje, obiekty użyteczności publicznej", "Obiekty gospodarcze i inne rolnicze",
+    "Obiekty magazynowe, place składowe", "Obiekty mieszkalne",
     "Obiekty produkcyjne, instalacje technologiczne, rurociągi, urządzenia",
-    "Śmietniki, wysypiska",
-    "Środki transportu drogowego",
-    "Środki transportu kolejowego",
-    "Środki transportu lotniczego",
-    "Środki transportu wodnego",
-    "Trawy, torfowiska, lasy, pola, stogi"
+    "Śmietniki, wysypiska", "Środki transportu drogowego", "Środki transportu kolejowego",
+    "Środki transportu lotniczego", "Środki transportu wodnego", "Trawy, torfowiska, lasy, pola, stogi"
 ];
 
 // ELEMENTY DOM
@@ -78,10 +65,10 @@ const historiaBox = document.getElementById("historiaAlarmow");
 const selectRodzaj = document.getElementById("rodzaj");
 const selectPodrodzaj = document.getElementById("podrodzaj");
 
-// FUNKCJA DYNAMICZNIE ŁADOWANIA PODRODZAJÓW
+// FUNKCJA DYNAMICZNEGO ŁADOWANIA PODRODZAJÓW
 function aktualizujPodrodzaje() {
     const wypranyRodzaj = selectRodzaj.value;
-    selectPodrodzaj.innerHTML = ""; // Czyścimy listę
+    selectPodrodzaj.innerHTML = "";
 
     let opcje = [];
     if (wypranyRodzaj === "MZ") {
@@ -100,9 +87,7 @@ function aktualizujPodrodzaje() {
     });
 }
 
-// Reagujemy na zmianę wyboru w polach wyboru rodzaju
 selectRodzaj.addEventListener("change", aktualizujPodrodzaje);
-// Inicjalizujemy listę na start
 aktualizujPodrodzaje();
 
 function ukryj() {
@@ -183,7 +168,8 @@ document.getElementById("alarmBtn").onclick = async () => {
             lokalizacja: lokalizacja,
             opis: opis,
             czasNadania: czasNadania,
-            created: timestampZwykly
+            created: timestampZwykly,
+            reakcje: {} // Inicjalizacja pustej listy reakcji
         });
 
         alert("🚨 Alarm wysłany pomyślnie!");
@@ -192,6 +178,18 @@ document.getElementById("alarmBtn").onclick = async () => {
     } catch (error) {
         console.error("Błąd wysyłania alarmu: ", error);
         alert("Błąd wysyłania alarmu: " + error.message);
+    }
+};
+
+// ZGŁASZANIE REAKCJI (JADĘ / NIE JADĘ)
+window.zglaszReakcje = async (alarmId, status) => {
+    try {
+        const alarmRef = doc(db, "alarmy", alarmId);
+        await updateDoc(alarmRef, {
+            [`reakcje.${myUserId}`]: status
+        });
+    } catch (e) {
+        console.error("Błąd zapisu reakcji:", e);
     }
 };
 
@@ -215,7 +213,6 @@ onSnapshot(
     }
 );
 
-// AUTOMATYCZNE SPRAWDZANIE ODSTĘPU CZASU CO 1 SEKUNDĘ
 setInterval(() => {
     if (odebraneAlarmy.length > 0) {
         renderujEremize();
@@ -251,6 +248,17 @@ function renderujEremize() {
     // --- RENDEROWANIE AKTYWNEGO ALARMU ---
     if (aktywnyZdarzenie) {
         const wyswietlanyCzas = aktywnyZdarzenie.czasNadania || "Brak daty"; 
+        
+        // Zliczanie głosów
+        const reakcje = aktywnyZdarzenie.reakcje || {};
+        let jadeLiczba = 0;
+        let nieJadeLiczba = 0;
+        let mojStatus = reakcje[myUserId] || null;
+
+        Object.values(reakcje).forEach(val => {
+            if (val === "jade") jadeLiczba++;
+            if (val === "nie_jade") nieJadeLiczba++;
+        });
 
         alarmBox.innerHTML = `
             <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
@@ -258,6 +266,22 @@ function renderujEremize() {
             <p><b>Lokalizacja:</b><br>${aktywnyZdarzenie.lokalizacja}</p>
             <p><b>Opis:</b><br>${aktywnyZdarzenie.opis || "Brak opisu"}</p>
             <p><b>Data i godzina:</b> ${wyswietlanyCzas}</p>
+
+            <div class="reakcja-box">
+                <h3>DEKLARACJA WYJAZDU:</h3>
+                <div class="reakcja-przyciski">
+                    <button class="btn-jade ${mojStatus === 'jade' ? 'wybrany' : ''}" onclick="zglaszReakcje('${aktywnyZdarzenie.id}', 'jade')">
+                        ✅ BIORĘ UDZIAŁ
+                    </button>
+                    <button class="btn-nie-jade ${mojStatus === 'nie_jade' ? 'wybrany' : ''}" onclick="zglaszReakcje('${aktywnyZdarzenie.id}', 'nie_jade')">
+                        ❌ NIE MOGĘ
+                    </button>
+                </div>
+                <div class="licznik-statystyki">
+                    <span class="stat-jade">👨‍🚒 Biorą udział: <b>${jadeLiczba}</b></span>
+                    <span class="stat-nie">❌ Nie mogą: <b>${nieJadeLiczba}</b></span>
+                </div>
+            </div>
         `;
         alarmBox.classList.add("alarm-active");
 
@@ -277,6 +301,11 @@ function renderujEremize() {
         historiaBox.innerHTML = historiaZdarzen.map(item => {
             const czasItem = item.czasNadania || "Brak daty";
             const podrodzajTekst = item.podrodzaj ? ` - ${item.podrodzaj}` : '';
+            
+            // Podsumowanie reakcji w historii
+            const reakcje = item.reakcje || {};
+            let jade = 0;
+            Object.values(reakcje).forEach(val => { if (val === "jade") jade++; });
 
             return `
                 <div class="historia-item">
@@ -286,6 +315,7 @@ function renderujEremize() {
                     </div>
                     <h4>📍 ${item.lokalizacja}</h4>
                     <p>${item.opis ? '<b>Opis:</b> ' + item.opis : '<i>Brak dodatkowego opisu</i>'}</p>
+                    <div class="historia-obsada">👨‍🚒 Obsada wyjazdowa: <b>${jade} osób</b></div>
                 </div>
             `;
         }).join("");
