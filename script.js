@@ -25,7 +25,7 @@ const syrena = new Audio("syrena-6.mp3");
 
 let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
-let odebraneAlarmy = []; // Przechowujemy odebrane dane globalnie
+let odebraneAlarmy = [];
 
 // ELEMENTY DOM
 const menu = document.getElementById("menu");
@@ -134,18 +134,16 @@ onSnapshot(
             lista.push({ id: doc.id, ...doc.data() });
         });
 
-        // Sortowanie od najnowszego
         lista.sort((a, b) => (b.created || 0) - (a.created || 0));
-        
         odebraneAlarmy = lista;
         renderujEremize();
     },
     (error) => {
-        console.error("Błąd połączenia z bazy Firebase: ", error);
+        console.error("Błąd połączenia z bazą Firebase: ", error);
     }
 );
 
-// AUTOMATYCZNE ODŚWIEŻANIE CO 1 SEKUNDĘ (ŻEBY ALARM ZGASŁ DOKŁADNIE PO 30 SEKUNDACH)
+// SPRAWDZANIE WYGASANIA ALARMU CO 1 SEKUNDĘ
 setInterval(() => {
     if (odebraneAlarmy.length > 0) {
         renderujEremize();
@@ -165,17 +163,15 @@ function renderujEremize() {
     const najnowszy = odebraneAlarmy[0];
     const teraz = Date.now();
     const czasOdWyslania = teraz - (najnowszy.created || 0);
-    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund w ms
+    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund
 
     let aktywnyZdarzenie = null;
     let historiaZdarzen = [];
 
-    // Sprawdzamy czy najnowszy alarm powstał mniej niż 30 sekund temu
     if (czasOdWyslania < CZAS_TRWANIA_ALARMU) {
         aktywnyZdarzenie = najnowszy;
-        historiaZdarzen = odebraneAlarmy.slice(1); // Reszta idzie do historii
+        historiaZdarzen = odebraneAlarmy.slice(1);
     } else {
-        // Jeśli minęło 30s, WSZYSTKIE alarmy lądują w historii
         aktywnyZdarzenie = null;
         historiaZdarzen = odebraneAlarmy;
     }
@@ -193,7 +189,6 @@ function renderujEremize() {
         `;
         alarmBox.classList.add("alarm-active");
 
-        // Odtwarzanie dźwięku
         if (trybStrony === "remiza" && ostatnioOdtworzonyID !== aktywnyZdarzenie.id) {
             ostatnioOdtworzonyID = aktywnyZdarzenie.id;
             syrena.currentTime = 0;
@@ -203,7 +198,7 @@ function renderujEremize() {
         wylaczActiveAlarm();
     }
 
-    // --- RENDEROWANIE HISTORII ---
+    // --- RENDEROWANIE ESTETYCZNEJ HISTORII ---
     if (historiaZdarzen.length === 0) {
         historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
     } else {
@@ -212,9 +207,12 @@ function renderujEremize() {
 
             return `
                 <div class="historia-item">
-                    <h4>📍 ${item.lokalizacja} (${item.rodzaj})</h4>
-                    <p><b>Data/Godzina:</b> ${czasItem}</p>
-                    <p><b>Opis:</b> ${item.opis || "Brak opisu"}</p>
+                    <div class="historia-naglowek">
+                        <span class="historia-rodzaj">${item.rodzaj}</span>
+                        <span class="historia-czas">⏰ ${czasItem}</span>
+                    </div>
+                    <h4>📍 ${item.lokalizacja}</h4>
+                    <p>${item.opis ? '<b>Opis:</b> ' + item.opis : '<i>Brak dodatkowego opisu</i>'}</p>
                 </div>
             `;
         }).join("");
