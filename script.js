@@ -29,7 +29,7 @@ let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
 let odebraneAlarmy = [];
 
-// IDENTYFIKATOR UŻYTKOWNIKA (Żeby pamiętać jego wybór na telefonie)
+// IDENTYFIKATOR UŻYTKOWNIKA
 let myUserId = localStorage.getItem("strazak_id");
 if (!myUserId) {
     myUserId = "strazak_" + Math.random().toString(36).substr(2, 9);
@@ -65,7 +65,7 @@ const historiaBox = document.getElementById("historiaAlarmow");
 const selectRodzaj = document.getElementById("rodzaj");
 const selectPodrodzaj = document.getElementById("podrodzaj");
 
-// FUNKCJA DYNAMICZNEGO ŁADOWANIA PODRODZAJÓW
+// DYNAMICZNE PODRODZAJE
 function aktualizujPodrodzaje() {
     const wypranyRodzaj = selectRodzaj.value;
     selectPodrodzaj.innerHTML = "";
@@ -169,7 +169,7 @@ document.getElementById("alarmBtn").onclick = async () => {
             opis: opis,
             czasNadania: czasNadania,
             created: timestampZwykly,
-            reakcje: {} // Inicjalizacja pustej listy reakcji
+            reakcje: {}
         });
 
         alert("🚨 Alarm wysłany pomyślnie!");
@@ -181,7 +181,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 };
 
-// ZGŁASZANIE REAKCJI (JADĘ / NIE JADĘ)
+// ZGŁASZANIE REAKCJI
 window.zglaszReakcje = async (alarmId, status) => {
     try {
         const alarmRef = doc(db, "alarmy", alarmId);
@@ -207,6 +207,7 @@ onSnapshot(
         lista.sort((a, b) => (b.created || 0) - (a.created || 0));
         odebraneAlarmy = lista;
         renderujEremize();
+        aktualizujStatystyki();
     },
     (error) => {
         console.error("Błąd połączenia z bazą Firebase: ", error);
@@ -218,6 +219,33 @@ setInterval(() => {
         renderujEremize();
     }
 }, 1000);
+
+// PRZELICZANIE STATYSTYK WYJAZDÓW
+function aktualizujStatystyki() {
+    let countP = 0;
+    let countMZ = 0;
+    let countPNZR = 0;
+    let countC = 0;
+
+    odebraneAlarmy.forEach(item => {
+        if (item.rodzaj === "P") countP++;
+        else if (item.rodzaj === "MZ") countMZ++;
+        else if (item.rodzaj === "PNZR") countPNZR++;
+        else if (item.rodzaj === "Ć") countC++;
+    });
+
+    const elRazem = document.getElementById("statRazem");
+    const elP = document.getElementById("statP");
+    const elMZ = document.getElementById("statMZ");
+    const elPNZR = document.getElementById("statPNZR");
+    const elC = document.getElementById("statC");
+
+    if (elRazem) elRazem.textContent = odebraneAlarmy.length;
+    if (elP) elP.textContent = countP;
+    if (elMZ) elMZ.textContent = countMZ;
+    if (elPNZR) elPNZR.textContent = countPNZR;
+    if (elC) elC.textContent = countC;
+}
 
 // RENDEROWANIE E-REMIZY
 function renderujEremize() {
@@ -232,7 +260,7 @@ function renderujEremize() {
     const najnowszy = odebraneAlarmy[0];
     const teraz = Date.now();
     const czasOdWyslania = teraz - (najnowszy.created || 0);
-    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund
+    const CZAS_TRWANIA_ALARMU = 30000;
 
     let aktywnyZdarzenie = null;
     let historiaZdarzen = [];
@@ -249,7 +277,6 @@ function renderujEremize() {
     if (aktywnyZdarzenie) {
         const wyswietlanyCzas = aktywnyZdarzenie.czasNadania || "Brak daty"; 
         
-        // Zliczanie głosów
         const reakcje = aktywnyZdarzenie.reakcje || {};
         let jadeLiczba = 0;
         let nieJadeLiczba = 0;
@@ -302,7 +329,6 @@ function renderujEremize() {
             const czasItem = item.czasNadania || "Brak daty";
             const podrodzajTekst = item.podrodzaj ? ` - ${item.podrodzaj}` : '';
             
-            // Podsumowanie reakcji w historii
             const reakcje = item.reakcje || {};
             let jade = 0;
             Object.values(reakcje).forEach(val => { if (val === "jade") jade++; });
