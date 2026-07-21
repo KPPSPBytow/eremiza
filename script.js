@@ -25,6 +25,7 @@ const syrena = new Audio("syrena-6.mp3");
 
 let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
+let odebraneAlarmy = []; // Przechowujemy odebrane dane globalnie
 
 // ELEMENTY DOM
 const menu = document.getElementById("menu");
@@ -84,14 +85,11 @@ document.getElementById("loginBtn").onclick = () => {
     }
 };
 
-// FUNKCJA FORMATUJĄCA DATĘ
+// FORMATOWANIE DATY
 function getObecnaDataGodzina() {
     const teraz = new Date();
-    // formatuje datę na np: "15.10.2024, 18:45"
-    const dataStruktura = teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
-    return dataStruktura;
+    return teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
 }
-
 
 // WYSYŁANIE ALARMU
 document.getElementById("alarmBtn").onclick = async () => {
@@ -99,9 +97,8 @@ document.getElementById("alarmBtn").onclick = async () => {
     const lokalizacja = document.getElementById("lokalizacja").value.trim();
     const opis = document.getElementById("opis").value.trim();
     
-    // Zapisujemy od razu gotowy tekst z datą z przeglądarki nadającego alarm
     const czasNadania = getObecnaDataGodzina(); 
-    const timestampZwykly = Date.now(); // Do poprawnego sortowania historii na ekranie 
+    const timestampZwykly = Date.now(); 
 
     if (!lokalizacja) {
         alert("Podaj lokalizację zdarzenia!");
@@ -113,8 +110,8 @@ document.getElementById("alarmBtn").onclick = async () => {
             rodzaj: rodzaj,
             lokalizacja: lokalizacja,
             opis: opis,
-            czasNadania: czasNadania, // Przesyłamy ułożoną datę jako tekst
-            created: timestampZwykly  // Ukryty znacznik czasu do ułożenia listy
+            czasNadania: czasNadania,
+            created: timestampZwykly
         });
 
         alert("🚨 Alarm wysłany pomyślnie!");
@@ -132,61 +129,86 @@ const alarmyRef = collection(db, "alarmy");
 onSnapshot(
     alarmyRef,
     (snapshot) => {
-        const listaAlarmow = [];
+        const lista = [];
         snapshot.forEach((doc) => {
-            listaAlarmow.push({ id: doc.id, ...doc.data() });
+            lista.push({ id: doc.id, ...doc.data() });
         });
 
-        // Sortowanie po ukrytym czasie "created" - od najnowszego (najwyższy numer) do najstarszego
-        listaAlarmow.sort((a, b) => (b.created || 0) - (a.created || 0));
-
-        renderujEremize(listaAlarmow);
+        // Sortowanie od najnowszego
+        lista.sort((a, b) => (b.created || 0) - (a.created || 0));
+        
+        odebraneAlarmy = lista;
+        renderujEremize();
     },
     (error) => {
         console.error("Błąd połączenia z bazy Firebase: ", error);
-        alert("Błąd połączenia z bazą Firebase! Sprawdź reguły dostępu w konsoli.");
     }
 );
 
+// AUTOMATYCZNE ODŚWIEŻANIE CO 1 SEKUNDĘ (ŻEBY ALARM ZGASŁ DOKŁADNIE PO 30 SEKUNDACH)
+setInterval(() => {
+    if (odebraneAlarmy.length > 0) {
+        renderujEremize();
+    }
+}, 1000);
+
 // RENDEROWANIE E-REMIZY
-function renderujEremize(alarmy) {
+function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
-    if (alarmy.length === 0) {
-        alarmBox.innerHTML = `<h3>Brak aktywnego alarmu</h3>`;
-        alarmBox.classList.remove("alarm-active");
+    if (odebraneAlarmy.length === 0) {
+        wylaczActiveAlarm();
         historiaBox.innerHTML = `<div class="historia-pusta">Brak zapisanych alarmów w historii.</div>`;
         return;
     }
 
-    // 1. AKTYWNY ALARM (NAJNOWSZY Z LISTY)
-    const najnowszy = alarmy[0];
-    const wyswietlanyCzas = najnowszy.czasNadania || "Brak zapisanej daty"; 
+    const najnowszy = odebraneAlarmy[0];
+    const teraz = Date.now();
+    const czasOdWyslania = teraz - (najnowszy.created || 0);
+    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund w ms
 
-    alarmBox.innerHTML = `
-        <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
-        <p><b>Rodzaj:</b> ${najnowszy.rodzaj}</p>
-        <p><b>Lokalizacja:</b><br>${najnowszy.lokalizacja}</p>
-        <p><b>Opis:</b><br>${najnowszy.opis || "Brak opisu"}</p>
-        <p><b>Data i godzina:</b> ${wyswietlanyCzas}</p>
-    `;
-    alarmBox.classList.add("alarm-active");
+    let aktywnyZdarzenie = null;
+    let historiaZdarzen = [];
 
-    // Odtwarzanie dźwięku 
-    if (trybStrony === "remiza" && ostatnioOdtworzonyID !== najnowszy.id) {
-        ostatnioOdtworzonyID = najnowszy.id;
-        syrena.currentTime = 0;
-        syrena.play().catch(err => console.log("Dźwięk zablokowany: ", err));
+    // Sprawdzamy czy najnowszy alarm powstał mniej niż 30 sekund temu
+    if (czasOdWyslania < CZAS_TRWANIA_ALARMU) {
+        aktywnyZdarzenie = najnowszy;
+        historiaZdarzen = odebraneAlarmy.slice(1); // Reszta idzie do historii
+    } else {
+        // Jeśli minęło 30s, WSZYSTKIE alarmy lądują w historii
+        aktywnyZdarzenie = null;
+        historiaZdarzen = odebraneAlarmy;
     }
 
-    // 2. HISTORIA ALARMÓW (RESZTA ZDARZEŃ Z LISTY)
-    const historia = alarmy.slice(1);
+    // --- RENDEROWANIE AKTYWNEGO ALARMU ---
+    if (aktywnyZdarzenie) {
+        const wyswietlanyCzas = aktywnyZdarzenie.czasNadania || "Brak daty"; 
 
-    if (historia.length === 0) {
+        alarmBox.innerHTML = `
+            <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
+            <p><b>Rodzaj:</b> ${aktywnyZdarzenie.rodzaj}</p>
+            <p><b>Lokalizacja:</b><br>${aktywnyZdarzenie.lokalizacja}</p>
+            <p><b>Opis:</b><br>${aktywnyZdarzenie.opis || "Brak opisu"}</p>
+            <p><b>Data i godzina:</b> ${wyswietlanyCzas}</p>
+        `;
+        alarmBox.classList.add("alarm-active");
+
+        // Odtwarzanie dźwięku
+        if (trybStrony === "remiza" && ostatnioOdtworzonyID !== aktywnyZdarzenie.id) {
+            ostatnioOdtworzonyID = aktywnyZdarzenie.id;
+            syrena.currentTime = 0;
+            syrena.play().catch(err => console.log("Dźwięk zablokowany: ", err));
+        }
+    } else {
+        wylaczActiveAlarm();
+    }
+
+    // --- RENDEROWANIE HISTORII ---
+    if (historiaZdarzen.length === 0) {
         historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
     } else {
-        historiaBox.innerHTML = historia.map(item => {
-            const czasItem = item.czasNadania || "Brak zapisanej daty";
+        historiaBox.innerHTML = historiaZdarzen.map(item => {
+            const czasItem = item.czasNadania || "Brak daty";
 
             return `
                 <div class="historia-item">
@@ -197,4 +219,11 @@ function renderujEremize(alarmy) {
             `;
         }).join("");
     }
+}
+
+function wylaczActiveAlarm() {
+    alarmBox.innerHTML = `<h3>Brak aktywnego alarmu</h3>`;
+    alarmBox.classList.remove("alarm-active");
+    syrena.pause();
+    syrena.currentTime = 0;
 }
