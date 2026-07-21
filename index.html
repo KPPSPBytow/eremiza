@@ -2,186 +2,82 @@
 <html lang="pl">
 
 <head>
-
-<meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>E-Remiza OSP</title>
-
-<link rel="stylesheet" href="style.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Remiza OSP</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<header>
+    <header>
+        <h1>🚒 SYSTEM ALARMOWANIA OSP 🚒</h1>
+    </header>
 
-<h1>🚒 SYSTEM ALARMOWANIA OSP 🚒</h1>
-
-</header>
-
-<!-- MENU -->
-
-<div id="menu" class="menu">
-
-<button id="btnDyzurny">
-
-👮 Panel Dyżurnego
-
-</button>
-
-<button id="btnRemiza">
-
-🚒 E-Remiza
-
-</button>
-
-</div>
-
-<!-- PIN -->
-
-<div id="pinBox" class="okno hidden">
-
-<h2>Logowanie Dyżurnego</h2>
-
-<input
-type="password"
-id="pin"
-placeholder="Podaj PIN">
-
-<button id="loginBtn">
-
-Zaloguj
-
-</button>
-
-<button class="back">
-
-Powrót
-
-</button>
-
-<p id="loginError"></p>
-
-</div>
-
-<!-- PANEL DYŻURNEGO -->
-
-<div id="dyzurnyPanel" class="okno hidden">
-
-<h2>Nowe Zdarzenie</h2>
-
-<label>
-
-Rodzaj zdarzenia
-
-</label>
-
-<select id="rodzaj">
-
-<option>MZ</option>
-
-<option>P</option>
-
-<option>PNZR</option>
-
-<option>Ć</option>
-
-</select>
-
-<label>
-
-Lokalizacja
-
-</label>
-
-<input
-type="text"
-id="lokalizacja"
-placeholder="np. Warszawa ul. Leśna 12">
-
-<label>
-
-Opis
-
-</label>
-
-<textarea
-id="opis"
-rows="6"
-placeholder="Opis zdarzenia..."></textarea>
-
-<button id="alarmBtn">
-
-🚨 Alarmuj OSP
-
-</button>
-
-<button class="back">
-
-Powrót
-
-</button>
-
-</div>
-
-<!-- E-REMIZA -->
-
-<div id="remizaPanel" class="okno hidden">
-
-    <h2>🚒 E-Remiza</h2>
-
-    <!-- AKTYWNY ALARM -->
-
-    <div id="alarm">
-
-        <h3>
-
-            Brak aktywnego alarmu
-
-        </h3>
-
+    <!-- MENU -->
+    <div id="menu" class="menu">
+        <button id="btnDyzurny">👮 Panel Dyżurnego</button>
+        <button id="btnRemiza">🚒 E-Remiza</button>
     </div>
 
-    <hr style="margin:30px 0;border:1px solid #444;">
+    <!-- PIN -->
+    <div id="pinBox" class="okno hidden">
+        <h2>Logowanie Dyżurnego</h2>
+        <input type="password" id="pin" placeholder="Podaj PIN">
+        <button id="loginBtn">Zaloguj</button>
+        <button class="back">Powrót</button>
+        <p id="loginError"></p>
+    </div>
 
-    <!-- HISTORIA ALARMÓW -->
+    <!-- PANEL DYŻURNEGO -->
+    <div id="dyzurnyPanel" class="okno hidden">
+        <h2>Nowe Zdarzenie</h2>
 
-    <h2>📜 Historia alarmów</h2>
+        <label>Rodzaj zdarzenia</label>
+        <select id="rodzaj">
+            <option value="MZ">MZ (Miejscowe Zagrożenie)</option>
+            <option value="P">P (Pożar)</option>
+            <option value="PNZR">PNZR (Izolowane Zdarzenie Ratownictwa Medycznego)</option>
+            <option value="Ć">Ć (Ćwiczenia)</option>
+        </select>
 
-    <div id="historiaAlarmow">
+        <label id="lblPodrodzaj">Podrodzaj zdarzenia</label>
+        <select id="podrodzaj">
+            <!-- Dynamicznie wypełniane przez JS -->
+        </select>
 
-        <div class="historia-pusta">
+        <label>Lokalizacja</label>
+        <input type="text" id="lokalizacja" placeholder="np. Bytów ul. Leśna 12">
 
-            Brak zapisanych alarmów.
+        <label>Opis</label>
+        <textarea id="opis" rows="6" placeholder="Opis zdarzenia..."></textarea>
 
+        <button id="alarmBtn">🚨 Alarmuj OSP</button>
+        <button class="back">Powrót</button>
+    </div>
+
+    <!-- E-REMIZA -->
+    <div id="remizaPanel" class="okno hidden">
+        <h2>🚒 E-Remiza</h2>
+
+        <!-- AKTYWNY ALARM -->
+        <div id="alarm">
+            <h3>Brak aktywnego alarmu</h3>
         </div>
 
+        <hr style="margin:30px 0; border:1px solid #444;">
+
+        <!-- HISTORIA ALARMÓW -->
+        <h2>📜 Historia alarmów</h2>
+        <div id="historiaAlarmow">
+            <div class="historia-pusta">Brak zapisanych alarmów.</div>
+        </div>
+
+        <button class="back">Powrót</button>
     </div>
 
-    <button class="back">
-
-        Powrót
-
-    </button>
-
-</div>
-
-<!-- Import map dla Firebase -->
-
-<script type="importmap">
-{
-  "imports": {
-    "firebase/app": "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js"
-  }
-}
-</script>
-
-<!-- Główny skrypt -->
-
-<script type="module" src="script.js"></script>
+    <!-- Główny skrypt modułowy -->
+    <script type="module" src="script.js"></script>
 
 </body>
 </html>
