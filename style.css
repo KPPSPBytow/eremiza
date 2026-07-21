@@ -256,6 +256,57 @@ select:focus {
     color: #ff3b30;
 }
 
+/* --- PANEL STATYSTYK WYJAZDOWYCH --- */
+
+.statystyki-roczne {
+    margin-top: 25px;
+    background: #1a1a1a;
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid #333;
+}
+
+.statystyki-roczne h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #ffdd57;
+    text-align: center;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+}
+
+.stat-card {
+    background: #262626;
+    padding: 12px 8px;
+    border-radius: 10px;
+    text-align: center;
+    border-top: 4px solid #888;
+}
+
+.stat-card.total { border-top-color: #ffdd57; }
+.stat-card.pozar { border-top-color: #ff3b30; }
+.stat-card.mz { border-top-color: #007aff; }
+.stat-card.pnzr { border-top-color: #4cd964; }
+.stat-card.cwiczenia { border-top-color: #af52de; }
+
+.stat-liczba {
+    display: block;
+    font-size: 22px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.stat-etykieta {
+    font-size: 11px;
+    color: #aaa;
+    margin-top: 4px;
+    display: block;
+}
+
 /* --- ESTETYCZNA HISTORIA ALARMÓW --- */
 
 #historiaAlarmow {
@@ -363,5 +414,9 @@ select:focus {
 
     .reakcja-przyciski {
         flex-direction: column;
+    }
+
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
