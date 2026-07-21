@@ -142,6 +142,8 @@ select:focus {
     font-weight: bold;
 }
 
+/* --- AKTYWNY ALARM --- */
+
 #alarm {
     margin-top: 20px;
     background: #2f2f2f;
@@ -181,7 +183,80 @@ select:focus {
     font-size: 18px;
 }
 
-/* --- ESTETYCZNE KARTY HISTORII ALARMÓW --- */
+/* --- REAKCJE I LICZNIK STRAŻAKÓW --- */
+
+.reakcja-box {
+    margin-top: 20px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.reakcja-box h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: #ddd;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.reakcja-przyciski {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.reakcja-przyciski button {
+    flex: 1;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    border-radius: 8px;
+    color: white;
+    opacity: 0.7;
+    border: 2px solid transparent;
+}
+
+.btn-jade {
+    background: #1b8a3e;
+}
+
+.btn-nie-jade {
+    background: #a82020;
+}
+
+.reakcja-przyciski button:hover {
+    opacity: 0.9;
+}
+
+.reakcja-przyciski button.wybrany {
+    opacity: 1;
+    border-color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    transform: scale(1.02);
+}
+
+.licznik-statystyki {
+    display: flex;
+    justify-content: space-around;
+    font-size: 16px;
+    background: #111;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.stat-jade {
+    color: #4cd964;
+}
+
+.stat-nie {
+    color: #ff3b30;
+}
+
+/* --- ESTETYCZNA HISTORIA ALARMÓW --- */
 
 #historiaAlarmow {
     display: flex;
@@ -247,6 +322,15 @@ select:focus {
     margin: 0;
 }
 
+.historia-obsada {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #4cd964;
+    font-weight: bold;
+    border-top: 1px solid #333;
+    padding-top: 8px;
+}
+
 .historia-pusta {
     text-align: center;
     color: #666;
@@ -256,6 +340,8 @@ select:focus {
     border-radius: 10px;
     border: 1px dashed #333;
 }
+
+/* --- WERSJA MOBILNA --- */
 
 @media(max-width:700px) {
     .menu {
@@ -273,5 +359,9 @@ select:focus {
 
     .okno {
         width: 95%;
+    }
+
+    .reakcja-przyciski {
+        flex-direction: column;
     }
 }
