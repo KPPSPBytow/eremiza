@@ -84,11 +84,24 @@ document.getElementById("loginBtn").onclick = () => {
     }
 };
 
+// FUNKCJA FORMATUJĄCA DATĘ
+function getObecnaDataGodzina() {
+    const teraz = new Date();
+    // formatuje datę na np: "15.10.2024, 18:45"
+    const dataStruktura = teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
+    return dataStruktura;
+}
+
+
 // WYSYŁANIE ALARMU
 document.getElementById("alarmBtn").onclick = async () => {
     const rodzaj = document.getElementById("rodzaj").value;
     const lokalizacja = document.getElementById("lokalizacja").value.trim();
     const opis = document.getElementById("opis").value.trim();
+    
+    // Zapisujemy od razu gotowy tekst z datą z przeglądarki nadającego alarm
+    const czasNadania = getObecnaDataGodzina(); 
+    const timestampZwykly = Date.now(); // Do poprawnego sortowania historii na ekranie 
 
     if (!lokalizacja) {
         alert("Podaj lokalizację zdarzenia!");
@@ -100,7 +113,8 @@ document.getElementById("alarmBtn").onclick = async () => {
             rodzaj: rodzaj,
             lokalizacja: lokalizacja,
             opis: opis,
-            created: Date.now()
+            czasNadania: czasNadania, // Przesyłamy ułożoną datę jako tekst
+            created: timestampZwykly  // Ukryty znacznik czasu do ułożenia listy
         });
 
         alert("🚨 Alarm wysłany pomyślnie!");
@@ -123,7 +137,7 @@ onSnapshot(
             listaAlarmow.push({ id: doc.id, ...doc.data() });
         });
 
-        // Sortowanie po czasie w JS (od najnowszego do najstarszego)
+        // Sortowanie po ukrytym czasie "created" - od najnowszego (najwyższy numer) do najstarszego
         listaAlarmow.sort((a, b) => (b.created || 0) - (a.created || 0));
 
         renderujEremize(listaAlarmow);
@@ -145,34 +159,34 @@ function renderujEremize(alarmy) {
         return;
     }
 
-    // 1. AKTYWNY ALARM (NAJNOWSZY)
+    // 1. AKTYWNY ALARM (NAJNOWSZY Z LISTY)
     const najnowszy = alarmy[0];
-    const dataGodzina = najnowszy.created ? new Date(najnowszy.created).toLocaleString("pl-PL") : "Brak daty";
+    const wyswietlanyCzas = najnowszy.czasNadania || "Brak zapisanej daty"; 
 
     alarmBox.innerHTML = `
         <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
         <p><b>Rodzaj:</b> ${najnowszy.rodzaj}</p>
         <p><b>Lokalizacja:</b><br>${najnowszy.lokalizacja}</p>
         <p><b>Opis:</b><br>${najnowszy.opis || "Brak opisu"}</p>
-        <p><b>Data i godzina:</b> ${dataGodzina}</p>
+        <p><b>Data i godzina:</b> ${wyswietlanyCzas}</p>
     `;
     alarmBox.classList.add("alarm-active");
 
-    // Odtwarzanie dźwięku
+    // Odtwarzanie dźwięku 
     if (trybStrony === "remiza" && ostatnioOdtworzonyID !== najnowszy.id) {
         ostatnioOdtworzonyID = najnowszy.id;
         syrena.currentTime = 0;
         syrena.play().catch(err => console.log("Dźwięk zablokowany: ", err));
     }
 
-    // 2. HISTORIA ALARMÓW
+    // 2. HISTORIA ALARMÓW (RESZTA ZDARZEŃ Z LISTY)
     const historia = alarmy.slice(1);
 
     if (historia.length === 0) {
         historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
     } else {
         historiaBox.innerHTML = historia.map(item => {
-            const czasItem = item.created ? new Date(item.created).toLocaleString("pl-PL") : "Brak daty";
+            const czasItem = item.czasNadania || "Brak zapisanej daty";
 
             return `
                 <div class="historia-item">
