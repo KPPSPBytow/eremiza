@@ -61,7 +61,7 @@ document.getElementById("btnDyzurny").onclick = () => { ukryjWszystko(); pinBox.
 document.getElementById("btnRemiza").onclick = () => { ukryjWszystko(); remiza.classList.remove("hidden"); };
 document.querySelectorAll(".back").forEach(b => b.onclick = () => { ukryjWszystko(); menu.classList.remove("hidden"); });
 
-// LOGOWANIE DWUETAPOWE (PIN + KOD WERYFIKACJI)
+// LOGOWANIE DWUETAPOWE
 document.getElementById("loginBtn").onclick = async () => {
     const wpisanyPin = document.getElementById("inputPin").value.trim();
     const wpisanyKod = document.getElementById("inputKod").value.trim();
@@ -75,10 +75,9 @@ document.getElementById("loginBtn").onclick = async () => {
     }
 
     try {
-        // 1. Sprawdzamy Kod Weryfikacyjny
         const kodSnap = await getDoc(doc(db, "kody_weryfikacyjne", wpisanyKod));
         if (!kodSnap.exists()) {
-            errorEl.innerHTML = "❌ Błędny kod weryfikacyjny (użyj `/weryfikacja`)";
+            errorEl.innerHTML = "❌ Błędny kod weryfikacyjny";
             return;
         }
 
@@ -88,14 +87,12 @@ document.getElementById("loginBtn").onclick = async () => {
             return;
         }
 
-        // 2. Sprawdzamy PIN użytkownika
         const userSnap = await getDoc(doc(db, "uzytkownicy_osp", daneKodu.discordId));
         if (!userSnap.exists() || userSnap.data().pin !== wpisanyPin) {
             errorEl.innerHTML = "❌ Podany PIN nie pasuje do użytkownika!";
             return;
         }
 
-        // Sukces logowania
         zalogowanyUzytkownik = {
             discordId: daneKodu.discordId,
             nazwa: daneKodu.nazwa || userSnap.data().nazwa || "Nieznany"
@@ -141,7 +138,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 };
 
-// NASŁUCHIWANIE BAZY W CZASIE RZECZYWISTYM
+// NASŁUCHIWANIE ALARMÓW W CZASIE RZECZYWISTYM
 onSnapshot(collection(db, "alarmy"), (snapshot) => {
     odebraneAlarmy = [];
     snapshot.forEach(doc => odebraneAlarmy.push({ id: doc.id, ...doc.data() }));
@@ -165,16 +162,15 @@ function renderujRemize() {
         alarmBox.className = "alarm-box alarm-active";
         alarmBox.innerHTML = `
             <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
-            <p><b>Rodzaj:</b> ${najnowszy.rodzaj} (${najnowszy.podrodzaj})</p>
-            <p><b>Lokalizacja:</b> ${najnowszy.lokalizacja}</p>
-            <p><b>Opis:</b> ${najnowszy.opis}</p>
+            <p style="color: #fff;"><b>Rodzaj:</b> ${najnowszy.rodzaj} (${najnowszy.podrodzaj})</p>
+            <p style="color: #fff;"><b>Lokalizacja:</b> ${najnowszy.lokalizacja}</p>
+            <p style="color: #fff;"><b>Opis:</b> ${najnowszy.opis}</p>
         `;
     } else {
         alarmBox.className = "alarm-box";
         alarmBox.innerHTML = "<h3>Brak aktywnego alarmu</h3>";
     }
 
-    // CZYSZCZENIE HISTORII: Usunięto ID oraz Dyżurnego, dodano Opis!
     historiaBox.innerHTML = odebraneAlarmy.map(a => `
         <div class="historia-item">
             <div class="historia-naglowek">
@@ -182,7 +178,7 @@ function renderujRemize() {
                 <span>⏰ ${a.czasNadania}</span>
             </div>
             <div style="margin-top: 5px;">📍 <b>${a.lokalizacja}</b></div>
-            <div style="margin-top: 5px; color: #cbd5e1; font-size: 0.9rem;">📝 <i>${a.opis || 'Brak opisu'}</i></div>
+            <div style="margin-top: 5px; color: #cbd5e1; font-size: 0.85rem;">📝 <i>${a.opis || 'Brak opisu'}</i></div>
         </div>
     `).join("");
 }
