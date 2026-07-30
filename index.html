@@ -3,109 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System E-Remiza OSP</title>
+    <title>E-Remiza OSP</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
-        <!-- EKRAN GŁÓWNY / MENU -->
+        <!-- MENU GŁÓWNE -->
         <div id="menu" class="card">
-            <h1>👨‍🚒 SYSTEM E-REMIZA OSP</h1>
-            <p class="subtitle">Wybierz tryb dostępu:</p>
+            <h1>🚒 E-Remiza OSP</h1>
+            <p>Wybierz tryb pracy:</p>
             <div class="button-group">
-                <button id="btnDyzurny" class="btn btn-primary">🛡️ Panel Dyżurnego (Nadawanie)</button>
-                <button id="btnRemiza" class="btn btn-secondary">📺 Ekran Remizy / Odsłuch</button>
+                <button id="btnDyzurny" class="btn primary">Panel Dyżurnego</button>
+                <button id="btnRemiza" class="btn secondary">Ekran Remizy</button>
             </div>
         </div>
 
-        <!-- EKRAN LOGOWANIA (PIN + KOD) -->
+        <!-- FORMULARZ LOGOWANIA (PIN + KOD) -->
         <div id="pinBox" class="card hidden">
-            <h2>🔐 Logowanie Dyżurnego</h2>
-            <p class="info-text">Aby się zalogować, podaj swój **PIN** (`/pin`) oraz aktualny **Kod Weryfikacyjny** (`/weryfikacja`).</p>
+            <h2>🔑 Logowanie Dyżurnego</h2>
+            <p>Podaj Twój stały PIN oraz jednorazowy kod z Discorda (`/weryfikacja`)</p>
             
             <div class="form-group">
-                <label for="inputPin">Osobisty PIN dyżurnego:</label>
-                <input type="password" id="inputPin" placeholder="Wpisz Twój PIN z Discorda">
+                <label for="inputPin">Stały PIN dyżurnego:</label>
+                <input type="password" id="inputPin" placeholder="np. 123456" maxlength="6">
             </div>
 
             <div class="form-group">
-                <label for="inputKod">Kod z komendy /weryfikacja:</label>
-                <input type="text" id="inputKod" placeholder="4-cyfrowy kod z Discorda" maxlength="4">
+                <label for="inputKod">Jednorazowy kod z Discorda:</label>
+                <input type="text" id="inputKod" placeholder="np. 4321" maxlength="4">
             </div>
 
             <div id="loginError" class="error-msg"></div>
 
             <div class="button-group">
-                <button id="loginBtn" class="btn btn-success">Zaloguj się</button>
-                <button class="btn btn-back back">Wróć</button>
+                <button id="loginBtn" class="btn primary">Zaloguj się</button>
+                <button class="btn back">Cofnij</button>
             </div>
         </div>
 
-        <!-- PANEL DYŻURNEGO (Tylko po zalogowaniu) -->
+        <!-- PANEL DYŻURNEGO -->
         <div id="dyzurnyPanel" class="card hidden">
-            <div class="user-header">
-                <h2>🚨 Panel Nadawania Alarmu</h2>
-                <span id="zalogowanyUserBadge" class="badge">Zalogowany jako: Loading...</span>
+            <div class="header-user">
+                <h2>👨‍🚒 Panel Dyżurnego</h2>
+                <span id="zalogowanyUserBadge" class="badge"></span>
             </div>
 
             <div class="form-group">
                 <label for="rodzaj">Rodzaj zdarzenia:</label>
                 <select id="rodzaj">
-                    <option value="MZ">MZ - Miejscowe Zagrożenie</option>
-                    <option value="P">P - Pożar</option>
-                    <option value="PNZR">PNZR - Pozostałe</option>
-                    <option value="Ć">Ć - Ćwiczenia</option>
+                    <option value="MZ">Miejscowe Zagrożenie (MZ)</option>
+                    <option value="P">Pożar (P)</option>
+                    <option value="AF">Alarm Fałszywy (AF)</option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="podrodzaj">Podrodzaj zdarzenia:</label>
-                <select id="podrodzaj">
-                    <!-- Wypełniane dynamicznie przez script.js -->
-                </select>
+                <select id="podrodzaj"></select>
             </div>
 
             <div class="form-group">
-                <label for="lokalizacja">Lokalizacja zdarzenia:</label>
-                <input type="text" id="lokalizacja" placeholder="np. ul. Strażacka 12, Racibórz">
+                <label for="lokalizacja">Lokalizacja:</label>
+                <input type="text" id="lokalizacja" placeholder="Miejscowość, ulica, numer...">
             </div>
 
             <div class="form-group">
-                <label for="opis">Opis zdarzenia / Uwagi:</label>
-                <textarea id="opis" rows="3" placeholder="Dodatkowe informacje dotyczące zdarzenia..."></textarea>
+                <label for="opis">Opis zdarzenia:</label>
+                <textarea id="opis" rows="3" placeholder="Szczegóły zgłoszenia..."></textarea>
             </div>
 
             <div class="button-group">
-                <button id="alarmBtn" class="btn btn-danger">🚨 WYSŁIJ ALARM DLA OSP</button>
-                <button class="btn btn-back back">Wyloguj i wróć</button>
+                <button id="alarmBtn" class="btn danger">🚨 WYŚLIJ ALARM</button>
+                <button class="btn back">Wyloguj</button>
             </div>
         </div>
 
-        <!-- EKRAN REMIZY (Podgląd live & statystyki) -->
+        <!-- EKRAN REMIZY -->
         <div id="remizaPanel" class="card hidden">
-            <button class="btn btn-back back top-back">Wróć do menu</button>
+            <h2>📺 Stanowisko Alarmowe OSP</h2>
             
             <div id="alarm" class="alarm-box">
                 <h3>Brak aktywnego alarmu</h3>
             </div>
 
-            <!-- STATYSTYKI -->
-            <div class="stats-box">
-                <div class="stat-item">Razem: <b id="statRazem">0</b></div>
-                <div class="stat-item">Pożary (P): <b id="statP">0</b></div>
-                <div class="stat-item">Miejscowe (MZ): <b id="statMZ">0</b></div>
-                <div class="stat-item">Ćwiczenia (Ć): <b id="statC">0</b></div>
-            </div>
-
             <h3>📜 Historia Zdarzeń</h3>
-            <div id="historiaAlarmow" class="historia-list">
-                <div class="historia-pusta">Ładowanie bazy danych...</div>
-            </div>
+            <div id="historiaAlarmow" class="historia-container"></div>
+
+            <button class="btn back" style="margin-top: 15px;">Cofnij</button>
         </div>
     </div>
 
-    <!-- SKRYPT FIREBASE & LOGIKA -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
