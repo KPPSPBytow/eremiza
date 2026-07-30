@@ -8,7 +8,7 @@ import {
     getDocs,
     updateDoc,
     onSnapshot,
-    serverTimestamp // 👈 CZAS Z SERWERA FIREBASE
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 // FIREBASE CONFIG
@@ -196,7 +196,7 @@ function getObecnaDataGodzina() {
     return teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
 }
 
-// WYSYŁANIE ALARMU (UŻYWA TERAZ SERVER TIMESTAMP)
+// WYSYŁANIE ALARMU (Z SYSTEMEM STATUSÓW)
 document.getElementById("alarmBtn").onclick = async () => {
     const rodzaj = selectRodzaj.value;
     const podrodzaj = selectPodrodzaj.value;
@@ -211,7 +211,15 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 
     try {
-        await addDoc(collection(db, "alarmy"), {
+        // 1. Wyłącz poprzednie aktywne alarmy
+        odebraneAlarmy.forEach(async (a) => {
+            if (a.status === "aktywny") {
+                await updateDoc(doc(db, "alarmy", a.id), { status: "zakonczony" });
+            }
+        });
+
+        // 2. Dodaj nowy aktywny alarm
+        const docRef = await addDoc(collection(db, "alarmy"), {
             rodzaj: rodzaj,
             podrodzaj: podrodzaj,
             lokalizacja: lokalizacja,
@@ -219,13 +227,24 @@ document.getElementById("alarmBtn").onclick = async () => {
             dyzurny: zalogowanyUzytkownik ? zalogowanyUzytkownik.nazwa : "Dyżurny",
             discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : null,
             czasNadania: czasNadania,
-            created: serverTimestamp(), // 👈 UŻYWAMY CZASU Z SERWERA FIREBASE!
+            created: serverTimestamp(),
+            status: "aktywny", // 👈 ALARM JEST BAZOWO AKTYWNY
             reakcje: {}
         });
 
         alert("🚨 Alarm wysłany pomyślnie!");
         document.getElementById("lokalizacja").value = "";
         document.getElementById("opis").value = "";
+
+        // 3. Po 30 sekundach urządzenie nadawcy automatycznie gasi alarm w bazie!
+        setTimeout(async () => {
+            try {
+                await updateDoc(doc(db, "alarmy", docRef.id), { status: "zakonczony" });
+            } catch (err) {
+                console.log("Auto-zakończenie alarmu:", err);
+            }
+        }, 30000);
+
     } catch (error) {
         console.error("Błąd wysyłania alarmu: ", error);
         alert("Błąd wysyłania alarmu: " + error.message);
@@ -252,22 +271,16 @@ onSnapshot(
     (snapshot) => {
         const lista = [];
         snapshot.forEach((doc) => {
-            const data = doc.data();
-            // Konwersja czasu z Firebase (serverTimestamp) na milisekundowe Timestampy
-            let createdMs = 0;
-            if (data.created && typeof data.created.toMillis === "function") {
-                createdMs = data.created.toMillis();
-            } else if (typeof data.created === "number") {
-                createdMs = data.created;
-            } else {
-                createdMs = Date.now(); // Dla nowych dokumentów jeszcze bez potwierdzenia z serwera
-            }
-
-            lista.push({ id: doc.id, ...data, createdMs: createdMs });
+            lista.push({ id: doc.id, ...doc.data() });
         });
 
         // Sortowanie najnowszych alarmów
-        lista.sort((a, b) => b.createdMs - a.createdMs);
+        lista.sort((a, b) => {
+            const timeA = a.created && a.created.toMillis ? a.created.toMillis() : Date.now();
+            const timeB = b.created && b.created.toMillis ? b.created.toMillis() : Date.now();
+            return timeB - timeA;
+        });
+
         odebraneAlarmy = lista;
         renderujEremize();
         aktualizujStatystyki();
@@ -276,12 +289,6 @@ onSnapshot(
         console.error("Błąd połączenia z bazą Firebase: ", error);
     }
 );
-
-setInterval(() => {
-    if (odebraneAlarmy.length > 0) {
-        renderujEremize();
-    }
-}, 1000);
 
 // PRZELICZANIE STATYSTYK WYJAZDÓW
 function aktualizujStatystyki() {
@@ -310,7 +317,7 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY
+// RENDEROWANIE E-REMIZY (OPIERANE O STATUS A NIE ZEGAREK)
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
@@ -320,22 +327,9 @@ function renderujEremize() {
         return;
     }
 
-    const teraz = Date.now();
-    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund na aktywny alarm
-
-    let aktywnyZdarzenie = null;
-    let historiaZdarzen = [...odebraneAlarmy];
-
-    const najnowszy = odebraneAlarmy[0];
-    const createdTimestamp = najnowszy.createdMs || 0;
-    const roznica = teraz - createdTimestamp;
-
-    // AKTYWNY ALARM: Tylko jeśli od wysłania minęło MNIEJ niż 30 sekund
-    // LUB jeśli zegar komputera jest nieco cofnięty (roznica < 0)
-    if (createdTimestamp > 0 && roznica < CZAS_TRWANIA_ALARMU) {
-        aktywnyZdarzenie = najnowszy;
-        historiaZdarzen = odebraneAlarmy.slice(1);
-    }
+    // Szukamy aktywnego zdarzenia po POLU 'status'
+    const aktywnyZdarzenie = odebraneAlarmy.find(item => item.status === "aktywny");
+    const historiaZdarzen = odebraneAlarmy.filter(item => item.status !== "aktywny");
 
     // --- RENDEROWANIE AKTYWNEGO ALARMU ---
     if (aktywnyZdarzenie) {
