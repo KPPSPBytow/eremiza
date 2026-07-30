@@ -302,7 +302,7 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY (Z POPRAWIONĄ OBSŁUGĄ HISTORII)
+// RENDEROWANIE E-REMIZY (Z ZABEZPIECZENIEM TIMERA 30S)
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
@@ -320,9 +320,10 @@ function renderujEremize() {
 
     const najnowszy = odebraneAlarmy[0];
     const createdTimestamp = najnowszy.created || 0;
+    const roznica = teraz - createdTimestamp;
 
-    // Sprawdzamy czy najnowszy alarm jest jeszcze aktywny
-    if (createdTimestamp > 0 && (teraz - createdTimestamp < CZAS_TRWANIA_ALARMU)) {
+    // POPRAWIONY WARUNEK: Tolerancja 10s na desynchronizację zegarków (roznica >= -10000)
+    if (createdTimestamp > 0 && (roznica < CZAS_TRWANIA_ALARMU && roznica >= -10000)) {
         aktywnyZdarzenie = najnowszy;
         historiaZdarzen = odebraneAlarmy.slice(1);
     }
