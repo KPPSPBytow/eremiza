@@ -196,7 +196,7 @@ function getObecnaDataGodzina() {
     return teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
 }
 
-// WYSYŁANIE ALARMU (Z SYSTEMEM STATUSÓW)
+// WYSYŁANIE ALARMU
 document.getElementById("alarmBtn").onclick = async () => {
     const rodzaj = selectRodzaj.value;
     const podrodzaj = selectPodrodzaj.value;
@@ -211,14 +211,14 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 
     try {
-        // 1. Wyłącz poprzednie aktywne alarmy
+        // 1. Zawiadom bazę, że wszystkie poprzednie alarmy przestały być aktywne
         odebraneAlarmy.forEach(async (a) => {
-            if (a.status === "aktywny") {
-                await updateDoc(doc(db, "alarmy", a.id), { status: "zakonczony" });
+            if (a.isAktywny) {
+                await updateDoc(doc(db, "alarmy", a.id), { isAktywny: false });
             }
         });
 
-        // 2. Dodaj nowy aktywny alarm
+        // 2. Dodaj nowy alarm ze stanem isAktywny = true
         const docRef = await addDoc(collection(db, "alarmy"), {
             rodzaj: rodzaj,
             podrodzaj: podrodzaj,
@@ -228,7 +228,7 @@ document.getElementById("alarmBtn").onclick = async () => {
             discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : null,
             czasNadania: czasNadania,
             created: serverTimestamp(),
-            status: "aktywny", // 👈 ALARM JEST BAZOWO AKTYWNY
+            isAktywny: true,
             reakcje: {}
         });
 
@@ -236,12 +236,12 @@ document.getElementById("alarmBtn").onclick = async () => {
         document.getElementById("lokalizacja").value = "";
         document.getElementById("opis").value = "";
 
-        // 3. Po 30 sekundach urządzenie nadawcy automatycznie gasi alarm w bazie!
+        // 3. Po 30 sekundach wygaszamy stan aktywnego alarmu w bazie
         setTimeout(async () => {
             try {
-                await updateDoc(doc(db, "alarmy", docRef.id), { status: "zakonczony" });
+                await updateDoc(doc(db, "alarmy", docRef.id), { isAktywny: false });
             } catch (err) {
-                console.log("Auto-zakończenie alarmu:", err);
+                console.log("Wygaszenie alarmu:", err);
             }
         }, 30000);
 
@@ -270,15 +270,17 @@ onSnapshot(
     alarmyRef,
     (snapshot) => {
         const lista = [];
-        snapshot.forEach((doc) => {
-            lista.push({ id: doc.id, ...doc.data() });
+        snapshot.forEach((docSnap) => {
+            lista.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // Sortowanie najnowszych alarmów
+        // STABILNE SORTOWANIE (Najnowsze na samej górze)
         lista.sort((a, b) => {
-            const timeA = a.created && a.created.toMillis ? a.created.toMillis() : Date.now();
-            const timeB = b.created && b.created.toMillis ? b.created.toMillis() : Date.now();
-            return timeB - timeA;
+            // Jeśli dokument jest nowy i nie ma jeszcze przypisanego czasu serwera, dany element traktujemy jako najświeższy
+            const tA = a.created && a.created.toMillis ? a.created.toMillis() : Number.MAX_SAFE_INTEGER;
+            const tB = b.created && b.created.toMillis ? b.created.toMillis() : Number.MAX_SAFE_INTEGER;
+            
+            return tB - tA; // Od największej (najnowszej) wartości do najmniejszej
         });
 
         odebraneAlarmy = lista;
@@ -317,7 +319,7 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY (OPIERANE O STATUS A NIE ZEGAREK)
+// RENDEROWANIE E-REMIZY
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
@@ -327,9 +329,11 @@ function renderujEremize() {
         return;
     }
 
-    // Szukamy aktywnego zdarzenia po POLU 'status'
-    const aktywnyZdarzenie = odebraneAlarmy.find(item => item.status === "aktywny");
-    const historiaZdarzen = odebraneAlarmy.filter(item => item.status !== "aktywny");
+    // Szukamy aktywnego alarmu
+    const aktywnyZdarzenie = odebraneAlarmy.find(item => item.isAktywny === true);
+    
+    // Do historii trafiają wszystkie alarmy, które NIE są aktywne (kolejność chronologiczna zostaje zachowana z sortowania)
+    const historiaZdarzen = odebraneAlarmy.filter(item => item.isAktywny !== true);
 
     // --- RENDEROWANIE AKTYWNEGO ALARMU ---
     if (aktywnyZdarzenie) {
