@@ -258,6 +258,7 @@ onSnapshot(
             lista.push({ id: doc.id, ...doc.data() });
         });
 
+        // Sortowanie z obsługą braku pola 'created'
         lista.sort((a, b) => (b.created || 0) - (a.created || 0));
         odebraneAlarmy = lista;
         renderujEremize();
@@ -301,7 +302,7 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY
+// RENDEROWANIE E-REMIZY (Z POPRAWIONĄ OBSŁUGĄ HISTORII)
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
@@ -311,20 +312,19 @@ function renderujEremize() {
         return;
     }
 
-    const najnowszy = odebraneAlarmy[0];
     const teraz = Date.now();
-    const czasOdWyslania = teraz - (najnowszy.created || 0);
-    const CZAS_TRWANIA_ALARMU = 30000;
+    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund na aktywny alarm
 
     let aktywnyZdarzenie = null;
-    let historiaZdarzen = [];
+    let historiaZdarzen = [...odebraneAlarmy];
 
-    if (czasOdWyslania < CZAS_TRWANIA_ALARMU) {
+    const najnowszy = odebraneAlarmy[0];
+    const createdTimestamp = najnowszy.created || 0;
+
+    // Sprawdzamy czy najnowszy alarm jest jeszcze aktywny
+    if (createdTimestamp > 0 && (teraz - createdTimestamp < CZAS_TRWANIA_ALARMU)) {
         aktywnyZdarzenie = najnowszy;
         historiaZdarzen = odebraneAlarmy.slice(1);
-    } else {
-        aktywnyZdarzenie = null;
-        historiaZdarzen = odebraneAlarmy;
     }
 
     // --- RENDEROWANIE AKTYWNEGO ALARMU ---
@@ -390,10 +390,10 @@ function renderujEremize() {
             return `
                 <div class="historia-item">
                     <div class="historia-naglowek">
-                        <span class="historia-rodzaj">${item.rodzaj}${podrodzajTekst}</span>
+                        <span class="historia-rodzaj">${item.rodzaj || 'Zdarzenie'}${podrodzajTekst}</span>
                         <span class="historia-czas">⏰ ${czasItem}</span>
                     </div>
-                    <h4>📍 ${item.lokalizacja}</h4>
+                    <h4>📍 ${item.lokalizacja || 'Brak lokalizacji'}</h4>
                     <p>${item.opis ? '<b>Opis:</b> ' + item.opis : '<i>Brak dodatkowego opisu</i>'}</p>
                     <div class="historia-obsada">👨‍🚒 Obsada wyjazdowa: <b>${jade} osób</b></div>
                 </div>
