@@ -17,29 +17,34 @@
             <button id="btnRemiza" style="background-color: #2563eb; width: 100%;">🏢 Ekran Remizy / Podgląd</button>
         </div>
 
-        <!-- KONTENER LOGOWANIA DYŻURNEGO -->
+        <!-- DWA KAFELKI LOGOWANIA (OPCJA A) -->
         <div id="pinBox" class="card hidden">
             <h2>🔑 Logowanie Dyżurnego</h2>
-            <p style="color: #bbb; font-size: 14px; margin-bottom: 15px;">
-                Wybierz metodę autoryzacji z bota Discord
-            </p>
+            <p style="color: #bbb; font-size: 14px; margin-bottom: 15px;">Wybierz metodę logowania z Discorda</p>
 
-            <input type="password" id="pin" placeholder="Wpisz PIN lub Kod weryfikacyjny" autocomplete="off">
-            
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button id="loginPinBtn" style="background-color: #dc2626; flex: 1;">
-                    📌 Zaloguj PINem (/pin)
-                </button>
-                <button id="loginKodBtn" style="background-color: #2563eb; flex: 1;">
-                    🔐 Zaloguj Kodem (/weryfikacja)
+            <!-- KAFELEK 1: STAŁY PIN -->
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                <h3 style="margin-top: 0; font-size: 15px; color: #f87171;">📌 1. Stały PIN (/pin)</h3>
+                <input type="password" id="inputPin" placeholder="Wpisz Twój 6-cyfrowy PIN" autocomplete="off">
+                <button id="loginPinBtn" style="background-color: #dc2626; width: 100%; margin-top: 8px;">
+                    Zaloguj PIN-em
                 </button>
             </div>
 
-            <button class="back" style="margin-top: 10px; width: 100%;">Powrót</button>
-            <div id="loginError" style="color: #ef4444; margin-top: 12px; font-weight: bold; min-height: 20px;"></div>
+            <!-- KAFELEK 2: KOD WERYFIKACJI -->
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                <h3 style="margin-top: 0; font-size: 15px; color: #60a5fa;">🔐 2. Kod jednorazowy (/weryfikacja)</h3>
+                <input type="text" id="inputKod" placeholder="Wpisz 4-cyfrowy Kod" autocomplete="off">
+                <button id="loginKodBtn" style="background-color: #2563eb; width: 100%; margin-top: 8px;">
+                    Zaloguj Kodem
+                </button>
+            </div>
+
+            <button class="back" style="margin-top: 5px; width: 100%;">Powrót</button>
+            <div id="loginError" style="color: #ef4444; margin-top: 10px; font-weight: bold; min-height: 20px;"></div>
         </div>
 
-        <!-- PANEL DYŻURNEGO (NADAWANIE ALARMU) -->
+        <!-- PANEL DYŻURNEGO -->
         <div id="dyzurnyPanel" class="card hidden">
             <h2>🚨 Panel Dyżurnego – Nadawanie Alarmu</h2>
             
@@ -66,7 +71,7 @@
             <button class="back" style="margin-top: 10px; width: 100%;">Wyloguj / Powrót</button>
         </div>
 
-        <!-- EKRAN REMIZY (PODGLĄD I REAKCJE STRAŻAKÓW) -->
+        <!-- EKRAN REMIZY -->
         <div id="remizaPanel" class="card hidden">
             <div id="alarm" class="alarm-box">
                 <h3>Brak aktywnego alarmu</h3>
