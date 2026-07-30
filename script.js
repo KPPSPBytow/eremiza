@@ -4,6 +4,7 @@ import {
     collection,
     addDoc,
     doc,
+    getDoc,
     updateDoc,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
@@ -28,8 +29,9 @@ const syrena = new Audio("syrena-6.mp3");
 let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
 let odebraneAlarmy = [];
+let zalogowanyUzytkownik = null;
 
-// IDENTYFIKATOR UŻYTKOWNIKA
+// IDENTYFIKATOR UŻYTKOWNIKA (DLA REAKCJI BEZPOŚREDNIO ZE STRONY)
 let myUserId = localStorage.getItem("strazak_id");
 if (!myUserId) {
     myUserId = "strazak_" + Math.random().toString(36).substr(2, 9);
@@ -67,13 +69,13 @@ const selectPodrodzaj = document.getElementById("podrodzaj");
 
 // DYNAMICZNE PODRODZAJE
 function aktualizujPodrodzaje() {
-    const wypranyRodzaj = selectRodzaj.value;
+    const wybranyRodzaj = selectRodzaj.value;
     selectPodrodzaj.innerHTML = "";
 
     let opcje = [];
-    if (wypranyRodzaj === "MZ") {
+    if (wybranyRodzaj === "MZ") {
         opcje = podrodzajeMZ;
-    } else if (wypranyRodzaj === "P") {
+    } else if (wybranyRodzaj === "P") {
         opcje = podrodzajeP;
     } else {
         opcje = ["Standardowe"];
@@ -87,8 +89,10 @@ function aktualizujPodrodzaje() {
     });
 }
 
-selectRodzaj.addEventListener("change", aktualizujPodrodzaje);
-aktualizujPodrodzaje();
+if (selectRodzaj) {
+    selectRodzaj.addEventListener("change", aktualizujPodrodzaje);
+    aktualizujPodrodzaje();
+}
 
 function ukryj() {
     menu.classList.add("hidden");
@@ -126,35 +130,78 @@ document.querySelectorAll(".back").forEach(btn => {
     };
 });
 
-// LOGOWANIE DYŻURNEGO
-document.getElementById("loginBtn").onclick = () => {
-    const pin = document.getElementById("pin").value;
-    if (pin === "SKKPBytow") {
-        ukryj();
-        dyzurny.classList.remove("hidden");
-        trybStrony = "dyzurny";
-        document.getElementById("pin").value = "";
-        document.getElementById("loginError").innerHTML = "";
-    } else {
-        document.getElementById("loginError").innerHTML = "Niepoprawny PIN";
+// SYSTEM LOGOWANIA DYŻURNEGO (SPRAWDZA KOLEKCJĘ uzytkownicy_osp ORAZ kody_weryfikacyjne)
+document.getElementById("loginBtn").onclick = async () => {
+    const wpisanaWartosc = document.getElementById("pin").value.trim();
+    const errorEl = document.getElementById("loginError");
+    
+    errorEl.innerHTML = "Weryfikacja...";
+
+    if (!wpisanaWartosc) {
+        errorEl.innerHTML = "Wpisz PIN lub kod weryfikacyjny!";
+        return;
+    }
+
+    try {
+        // 1. SPRAWDZANIE STAŁEGO PIN-u W KOLEKCJI uzytkownicy_osp
+        const userDocRef = doc(db, "uzytkownicy_osp", wpisanaWartosc); 
+        // LUB sprawdzamy w całej kolekcji czy istnieje pole pin == wpisanaWartosc:
+        const snapKody = await getDoc(doc(db, "kody_weryfikacyjne", wpisanaWartosc));
+
+        if (snapKody.exists()) {
+            const daneKodu = snapKody.data();
+            if (Date.now() > daneKodu.waznyDo) {
+                errorEl.innerHTML = "❌ Kod jednorazowy wygasł!";
+                return;
+            }
+            zalogowanyUzytkownik = {
+                discordId: daneKodu.discordId,
+                nazwa: daneKodu.nazwa
+            };
+            pomyślneLogowanie();
+            return;
+        }
+
+        // Jeśli to nie był kod jednorazowy, przeszukujemy dokumenty użytkowników pod kątem PINu
+        const userDocDirect = await getDoc(doc(db, "uzytkownicy_osp", wpisanaWartosc));
+        if (userDocDirect.exists()) {
+            const uData = userDocDirect.data();
+            zalogowanyUzytkownik = {
+                discordId: uData.discordId,
+                nazwa: uData.nazwa
+            };
+            pomyślneLogowanie();
+            return;
+        }
+
+        errorEl.innerHTML = "❌ Nieprawidłowy PIN lub kod!";
+
+    } catch (e) {
+        console.error("Błąd logowania:", e);
+        errorEl.innerHTML = "Błąd połączenia z bazą danych.";
     }
 };
 
-// FORMATOWANIE DATY
-function getObecnaDataGodzina() {
-    const teraz = new Date();
-    return teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
+function pomyślneLogowanie() {
+    ukryj();
+    dyzurny.classList.remove("hidden");
+    trybStrony = "dyzurny";
+    document.getElementById("pin").value = "";
+    document.getElementById("loginError").innerHTML = "";
 }
 
-// WYSYŁANIE ALARMU
+// FORMATOWANIE CZASU
+function getObecnaGodzina() {
+    const teraz = new Date();
+    return teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
+}
+
+// NADAWANIE ALARMU (Bot sam wyłapie zmianę w Firebase i wyśle powiadomienie z Embedem)
 document.getElementById("alarmBtn").onclick = async () => {
     const rodzaj = selectRodzaj.value;
     const podrodzaj = selectPodrodzaj.value;
     const lokalizacja = document.getElementById("lokalizacja").value.trim();
     const opis = document.getElementById("opis").value.trim();
-    
-    const czasNadania = getObecnaDataGodzina(); 
-    const timestampZwykly = Date.now(); 
 
     if (!lokalizacja) {
         alert("Podaj lokalizację zdarzenia!");
@@ -167,12 +214,14 @@ document.getElementById("alarmBtn").onclick = async () => {
             podrodzaj: podrodzaj,
             lokalizacja: lokalizacja,
             opis: opis,
-            czasNadania: czasNadania,
-            created: timestampZwykly,
+            dyzurny: zalogowanyUzytkownik ? zalogowanyUzytkownik.nazwa : "Nieokreślony",
+            discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : null,
+            czasNadania: getObecnaGodzina(),
+            created: Date.now(),
             reakcje: {}
         });
 
-        alert("🚨 Alarm wysłany pomyślnie!");
+        alert("🚨 Alarm nadany! Powiadomienie zostało wysłane na Discorda.");
         document.getElementById("lokalizacja").value = "";
         document.getElementById("opis").value = "";
     } catch (error) {
@@ -181,7 +230,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 };
 
-// ZGŁASZANIE REAKCJI
+// DEKLAROWANIE WYJAZDU / BRAKU UDZIAŁU
 window.zglaszReakcje = async (alarmId, status) => {
     try {
         const alarmRef = doc(db, "alarmy", alarmId);
@@ -193,26 +242,22 @@ window.zglaszReakcje = async (alarmId, status) => {
     }
 };
 
-// NASŁUCHUJ ZMIAN W BAZIE (REALTIME)
+// NASŁUCHIWANIE BAZY DATA NA STRONIE
 const alarmyRef = collection(db, "alarmy");
 
-onSnapshot(
-    alarmyRef,
-    (snapshot) => {
-        const lista = [];
-        snapshot.forEach((doc) => {
-            lista.push({ id: doc.id, ...doc.data() });
-        });
+onSnapshot(alarmyRef, (snapshot) => {
+    const lista = [];
+    snapshot.forEach((doc) => {
+        lista.push({ id: doc.id, ...doc.data() });
+    });
 
-        lista.sort((a, b) => (b.created || 0) - (a.created || 0));
-        odebraneAlarmy = lista;
-        renderujEremize();
-        aktualizujStatystyki();
-    },
-    (error) => {
-        console.error("Błąd połączenia z bazą Firebase: ", error);
-    }
-);
+    lista.sort((a, b) => (b.created || 0) - (a.created || 0));
+    odebraneAlarmy = lista;
+    renderujEremize();
+    aktualizujStatystyki();
+}, (error) => {
+    console.error("Błąd Firebase na stronie:", error);
+});
 
 setInterval(() => {
     if (odebraneAlarmy.length > 0) {
@@ -220,12 +265,9 @@ setInterval(() => {
     }
 }, 1000);
 
-// PRZELICZANIE STATYSTYK WYJAZDÓW
+// STATYSTYKI
 function aktualizujStatystyki() {
-    let countP = 0;
-    let countMZ = 0;
-    let countPNZR = 0;
-    let countC = 0;
+    let countP = 0, countMZ = 0, countPNZR = 0, countC = 0;
 
     odebraneAlarmy.forEach(item => {
         if (item.rodzaj === "P") countP++;
@@ -247,13 +289,13 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY
+// RENDEROWANIE PANELU E-REMIZA
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
     if (odebraneAlarmy.length === 0) {
         wylaczActiveAlarm();
-        historiaBox.innerHTML = `<div class="historia-pusta">Brak zapisanych alarmów w historii.</div>`;
+        historiaBox.innerHTML = `<div class="historia-pusta">Brak zapisanych alarmów.</div>`;
         return;
     }
 
@@ -273,13 +315,10 @@ function renderujEremize() {
         historiaZdarzen = odebraneAlarmy;
     }
 
-    // --- RENDEROWANIE AKTYWNEGO ALARMU ---
     if (aktywnyZdarzenie) {
         const wyswietlanyCzas = aktywnyZdarzenie.czasNadania || "Brak daty"; 
-        
         const reakcje = aktywnyZdarzenie.reakcje || {};
-        let jadeLiczba = 0;
-        let nieJadeLiczba = 0;
+        let jadeLiczba = 0, nieJadeLiczba = 0;
         let mojStatus = reakcje[myUserId] || null;
 
         Object.values(reakcje).forEach(val => {
@@ -292,7 +331,7 @@ function renderujEremize() {
             <p><b>Rodzaj:</b> ${aktywnyZdarzenie.rodzaj} ${aktywnyZdarzenie.podrodzaj ? '(' + aktywnyZdarzenie.podrodzaj + ')' : ''}</p>
             <p><b>Lokalizacja:</b><br>${aktywnyZdarzenie.lokalizacja}</p>
             <p><b>Opis:</b><br>${aktywnyZdarzenie.opis || "Brak opisu"}</p>
-            <p><b>Data i godzina:</b> ${wyswietlanyCzas}</p>
+            <p><b>Godzina zgłoszenia:</b> ${wyswietlanyCzas}</p>
 
             <div class="reakcja-box">
                 <h3>DEKLARACJA WYJAZDU:</h3>
@@ -315,20 +354,18 @@ function renderujEremize() {
         if (trybStrony === "remiza" && ostatnioOdtworzonyID !== aktywnyZdarzenie.id) {
             ostatnioOdtworzonyID = aktywnyZdarzenie.id;
             syrena.currentTime = 0;
-            syrena.play().catch(err => console.log("Dźwięk zablokowany: ", err));
+            syrena.play().catch(err => console.log("Audio zablokowane: ", err));
         }
     } else {
         wylaczActiveAlarm();
     }
 
-    // --- RENDEROWANIE HISTORII ---
     if (historiaZdarzen.length === 0) {
-        historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
+        historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów.</div>`;
     } else {
         historiaBox.innerHTML = historiaZdarzen.map(item => {
-            const czasItem = item.czasNadania || "Brak daty";
+            const czasItem = item.czasNadania || "Brak godziny";
             const podrodzajTekst = item.podrodzaj ? ` - ${item.podrodzaj}` : '';
-            
             const reakcje = item.reakcje || {};
             let jade = 0;
             Object.values(reakcje).forEach(val => { if (val === "jade") jade++; });
