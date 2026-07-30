@@ -1,220 +1,124 @@
 <!DOCTYPE html>
-
 <html lang="pl">
 
-
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>E-Remiza OSP</title>
-
     <link rel="stylesheet" href="style.css">
-
 </head>
-
-
 
 <body>
 
-
-
     <header>
-
         <h1>🚒 SYSTEM ALARMOWANIA OSP 🚒</h1>
-
     </header>
 
-
-
     <!-- MENU -->
-
     <div id="menu" class="menu">
-
         <button id="btnDyzurny">👮 Panel Dyżurnego</button>
-
         <button id="btnRemiza">🚒 E-Remiza</button>
-
     </div>
 
-
-
-    <!-- PIN -->
-
+    <!-- LOGOWANIE DYŻURNEGO (DWA KAFELKI / SEKCJE - OPCJA A) -->
     <div id="pinBox" class="okno hidden">
+        <h2>🔑 Logowanie Dyżurnego</h2>
 
-        <h2>Logowanie Dyżurnego</h2>
+        <!-- KAFELEK 1: STAŁY PIN -->
+        <div class="login-subbox">
+            <h3>📌 Stały PIN (/pin)</h3>
+            <input type="password" id="inputPin" placeholder="Wpisz Twój PIN z bota">
+            <button id="loginPinBtn">Zaloguj PIN-em</button>
+        </div>
 
-        <input type="password" id="pin" placeholder="Podaj PIN">
-
-        <button id="loginBtn">Zaloguj</button>
+        <!-- KAFELEK 2: KOD WERYFIKACJI -->
+        <div class="login-subbox" style="margin-top: 20px;">
+            <h3>🔐 Kod jednorazowy (/weryfikacja)</h3>
+            <input type="text" id="inputKod" placeholder="Wpisz 4-cyfrowy Kod z bota" autocomplete="off">
+            <button id="loginKodBtn" class="btn-blue">Zaloguj Kodem</button>
+        </div>
 
         <button class="back">Powrót</button>
-
         <p id="loginError"></p>
-
     </div>
-
-
 
     <!-- PANEL DYŻURNEGO -->
-
     <div id="dyzurnyPanel" class="okno hidden">
-
         <h2>Nowe Zdarzenie</h2>
 
-
-
         <label>Rodzaj zdarzenia</label>
-
         <select id="rodzaj">
-
             <option value="MZ">MZ (Miejscowe Zagrożenie)</option>
-
             <option value="P">P (Pożar)</option>
-
             <option value="PNZR">PNZR (Izolowane Zdarzenie Ratownictwa Medycznego)</option>
-
             <option value="Ć">Ć (Ćwiczenia)</option>
-
         </select>
-
-
 
         <label id="lblPodrodzaj">Podrodzaj zdarzenia</label>
-
         <select id="podrodzaj">
-
             <!-- Dynamicznie wypełniane przez JS -->
-
         </select>
 
-
-
         <label>Lokalizacja</label>
-
         <input type="text" id="lokalizacja" placeholder="np. Bytów ul. Leśna 12">
 
-
-
         <label>Opis</label>
-
         <textarea id="opis" rows="6" placeholder="Opis zdarzenia..."></textarea>
 
-
-
         <button id="alarmBtn">🚨 Alarmuj OSP</button>
-
         <button class="back">Powrót</button>
-
     </div>
 
-
-
     <!-- E-REMIZA -->
-
     <div id="remizaPanel" class="okno hidden">
-
         <h2>🚒 E-Remiza</h2>
 
-
-
         <!-- 1. AKTYWNY ALARM (GÓRA) -->
-
         <div id="alarm">
-
             <h3>Brak aktywnego alarmu</h3>
-
         </div>
-
-
 
         <!-- 2. HISTORIA ALARMÓW (ŚRODEK) -->
-
         <h2 style="margin-top: 30px;">📜 Historia alarmów</h2>
-
         <div id="historiaAlarmow">
-
             <div class="historia-pusta">Brak zapisanych alarmów.</div>
-
         </div>
-
-
 
         <hr style="margin:25px 0; border:1px solid #333;">
 
-
-
         <!-- 3. PODSUMOWANIE / STATYSTYKI WYJAZDÓW (DÓŁ) -->
-
         <div class="statystyki-roczne">
-
             <h3>📊 Statystyki Wyjazdowe OSP</h3>
-
             <div class="stat-grid">
-
                 <div class="stat-card total">
-
                     <span class="stat-liczba" id="statRazem">0</span>
-
                     <span class="stat-etykieta">Suma wyjazdów</span>
-
                 </div>
-
                 <div class="stat-card pozar">
-
                     <span class="stat-liczba" id="statP">0</span>
-
                     <span class="stat-etykieta">Pożary (P)</span>
-
                 </div>
-
                 <div class="stat-card mz">
-
                     <span class="stat-liczba" id="statMZ">0</span>
-
                     <span class="stat-etykieta">Miejscowe Zagr. (MZ)</span>
-
                 </div>
-
                 <div class="stat-card pnzr">
-
                     <span class="stat-liczba" id="statPNZR">0</span>
-
                     <span class="stat-etykieta">Zabezpieczenie Rejonu (PNZR)</span>
-
                 </div>
-
                 <div class="stat-card cwiczenia">
-
                     <span class="stat-liczba" id="statC">0</span>
-
                     <span class="stat-etykieta">Ćwiczenia (Ć)</span>
-
                 </div>
-
             </div>
-
         </div>
 
-
-
         <button class="back">Powrót</button>
-
     </div>
 
-
-
     <!-- Główny skrypt modułowy -->
-
     <script type="module" src="script.js"></script>
-
-
 
 </body>
 
-</html> 
-
+</html>
