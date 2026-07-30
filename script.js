@@ -1,188 +1,172 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import {
-    getFirestore,
-    collection,
-    addDoc,
-    doc,
-    getDoc,
-    onSnapshot
-} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-
-// KONFIGURACJA FIREBASE
-const firebaseConfig = {
-  apiKey: "AIzaSyCiEgW5qAv3a61k4F8gXlvSFinHapOY6vU",
-  authDomain: "eremiza.firebaseapp.com",
-  projectId: "eremiza",
-  storageBucket: "eremiza.firebasestorage.app",
-  messagingSenderId: "304527774904",
-  appId: "1:304527774904:web:e32d405d1ef339b190904d",
-  measurementId: "G-Y7LWEKCF4H"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let odebraneAlarmy = [];
-let zalogowanyUzytkownik = null;
-
-const podrodzajeMZ = ["Atmosferyczne", "Drogowe", "Poszukiwawcze", "Pomoc PRM/Policji", "Inne MZ"];
-const podrodzajeP = ["Mieszkalne", "Uprawy/Trawy", "Pojazdy", "Obiekty", "Inne Pożary"];
-
-// ELEMENTY HTML
-const menu = document.getElementById("menu");
-const pinBox = document.getElementById("pinBox");
-const dyzurny = document.getElementById("dyzurnyPanel");
-const remiza = document.getElementById("remizaPanel");
-
-const selectRodzaj = document.getElementById("rodzaj");
-const selectPodrodzaj = document.getElementById("podrodzaj");
-
-function aktualizujPodrodzaje() {
-    selectPodrodzaj.innerHTML = "";
-    const opcje = selectRodzaj.value === "MZ" ? podrodzajeMZ : (selectRodzaj.value === "P" ? podrodzajeP : ["Standard"]);
-    opcje.forEach(opt => {
-        const el = document.createElement("option");
-        el.value = opt;
-        el.textContent = opt;
-        selectPodrodzaj.appendChild(el);
-    });
-}
-selectRodzaj.addEventListener("change", aktualizujPodrodzaje);
-aktualizujPodrodzaje();
-
-function ukryjWszystko() {
-    menu.classList.add("hidden");
-    pinBox.classList.add("hidden");
-    dyzurny.classList.add("hidden");
-    remiza.classList.add("hidden");
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-document.getElementById("btnDyzurny").onclick = () => { ukryjWszystko(); pinBox.classList.remove("hidden"); };
-document.getElementById("btnRemiza").onclick = () => { ukryjWszystko(); remiza.classList.remove("hidden"); };
-document.querySelectorAll(".back").forEach(b => b.onclick = () => { ukryjWszystko(); menu.classList.remove("hidden"); });
+body {
+    background-color: #0f172a;
+    color: #f8fafc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
 
-// LOGOWANIE DWUETAPOWE (PIN + KOD WERYFIKACJI)
-document.getElementById("loginBtn").onclick = async () => {
-    const wpisanyPin = document.getElementById("inputPin").value.trim();
-    const wpisanyKod = document.getElementById("inputKod").value.trim();
-    const errorEl = document.getElementById("loginError");
-    
-    errorEl.innerHTML = "Weryfikacja...";
+.container {
+    width: 100%;
+    max-width: 600px;
+}
 
-    if (!wpisanyPin || !wpisanyKod) {
-        errorEl.innerHTML = "❌ Wpisz zarówno PIN, jak i Kod Weryfikacyjny!";
-        return;
-    }
+.card {
+    background-color: #1e293b;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    border: 1px solid #334155;
+}
 
-    try {
-        // 1. Sprawdzamy Kod Weryfikacyjny
-        const kodSnap = await getDoc(doc(db, "kody_weryfikacyjne", wpisanyKod));
-        if (!kodSnap.exists()) {
-            errorEl.innerHTML = "❌ Błędny kod weryfikacyjny (użyj `/weryfikacja`)";
-            return;
-        }
+.hidden {
+    display: none !important;
+}
 
-        const daneKodu = kodSnap.data();
-        if (Date.now() > daneKodu.waznyDo) {
-            errorEl.innerHTML = "❌ Kod wygasł! Wygeneruj nowy komendą `/weryfikacja`";
-            return;
-        }
+h1, h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #ef4444;
+}
 
-        // 2. Sprawdzamy PIN użytkownika
-        const userSnap = await getDoc(doc(db, "uzytkownicy_osp", daneKodu.discordId));
-        if (!userSnap.exists() || userSnap.data().pin !== wpisanyPin) {
-            errorEl.innerHTML = "❌ Podany PIN nie pasuje do użytkownika!";
-            return;
-        }
+.subtitle, .info-text {
+    text-align: center;
+    color: #94a3b8;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+}
 
-        // Sukces logowania
-        zalogowanyUzytkownik = {
-            discordId: daneKodu.discordId,
-            nazwa: daneKodu.nazwa || userSnap.data().nazwa || "Nieznany"
-        };
+.form-group {
+    margin-bottom: 15px;
+}
 
-        document.getElementById("zalogowanyUserBadge").textContent = `Zalogowany: ${zalogowanyUzytkownik.nazwa}`;
-        ukryjWszystko();
-        dyzurny.classList.remove("hidden");
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #cbd5e1;
+    font-weight: 600;
+}
 
-    } catch (e) {
-        console.error(e);
-        errorEl.innerHTML = "❌ Błąd połączenia z bazą danych!";
-    }
-};
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    background-color: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+}
 
-// WYSYŁANIE ALARMU
-document.getElementById("alarmBtn").onclick = async () => {
-    const lokalizacja = document.getElementById("lokalizacja").value.trim();
-    const opis = document.getElementById("opis").value.trim();
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #ef4444;
+}
 
-    if (!lokalizacja) {
-        alert("Wpisz lokalizację!");
-        return;
-    }
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
 
-    try {
-        await addDoc(collection(db, "alarmy"), {
-            rodzaj: selectRodzaj.value,
-            podrodzaj: selectPodrodzaj.value,
-            lokalizacja: lokalizacja,
-            opis: opis || "Brak dodatkowego opisu.",
-            dyzurny: zalogowanyUzytkownik ? zalogowanyUzytkownik.nazwa : "Dyżurny",
-            discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : "",
-            czasNadania: new Date().toLocaleTimeString("pl-PL", {hour: '2-digit', minute:'2-digit'}),
-            created: Date.now()
-        });
+.btn {
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
 
-        alert("🚨 Alarm wysłany!");
-        document.getElementById("lokalizacja").value = "";
-        document.getElementById("opis").value = "";
-    } catch (e) {
-        alert("Błąd wysyłania alarmu: " + e.message);
-    }
-};
+.btn-primary { background-color: #2563eb; color: white; }
+.btn-primary:hover { background-color: #1d4ed8; }
 
-// NASŁUCHIWANIE BAZY W CZASIE RZECZYWISTYM
-onSnapshot(collection(db, "alarmy"), (snapshot) => {
-    odebraneAlarmy = [];
-    snapshot.forEach(doc => odebraneAlarmy.push({ id: doc.id, ...doc.data() }));
-    odebraneAlarmy.sort((a, b) => b.created - a.created);
-    renderujRemize();
-});
+.btn-secondary { background-color: #475569; color: white; }
+.btn-secondary:hover { background-color: #334155; }
 
-function renderujRemize() {
-    const alarmBox = document.getElementById("alarm");
-    const historiaBox = document.getElementById("historiaAlarmow");
+.btn-success { background-color: #16a34a; color: white; }
+.btn-success:hover { background-color: #15803d; }
 
-    if (odebraneAlarmy.length === 0) {
-        historiaBox.innerHTML = "<div class='historia-pusta'>Brak alarmów w historii.</div>";
-        return;
-    }
+.btn-danger { background-color: #dc2626; color: white; font-size: 1.1rem; }
+.btn-danger:hover { background-color: #b91c1c; }
 
-    const najnowszy = odebraneAlarmy[0];
-    const czyKrotko = (Date.now() - najnowszy.created) < 30000;
+.btn-back { background-color: transparent; border: 1px solid #475569; color: #94a3b8; }
+.btn-back:hover { background-color: #334155; color: white; }
 
-    if (czyKrotko) {
-        alarmBox.className = "alarm-box alarm-active";
-        alarmBox.innerHTML = `
-            <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
-            <p><b>Rodzaj:</b> ${najnowszy.rodzaj} (${najnowszy.podrodzaj})</p>
-            <p><b>Lokalizacja:</b> ${najnowszy.lokalizacja}</p>
-            <p><b>Opis:</b> ${najnowszy.opis}</p>
-        `;
-    } else {
-        alarmBox.className = "alarm-box";
-        alarmBox.innerHTML = "<h3>Brak aktywnego alarmu</h3>";
-    }
+.error-msg {
+    color: #f87171;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 10px;
+}
 
-    // CZYSZCZENIE HISTORII: Usunięto ID oraz Dyżurnego, dodano Opis!
-    historiaBox.innerHTML = odebraneAlarmy.map(a => `
-        <div class="historia-item">
-            <div class="historia-naglowek">
-                <span><b>${a.rodzaj}</b> (${a.podrodzaj || 'Standard'})</span>
-                <span>⏰ ${a.czasNadania}</span>
-            </div>
-            <div style="margin-top: 5px;">📍 <b>${a.lokalizacja}</b></div>
-            <div style="margin-top: 5px; color: #cbd5e1; font-size: 0.9rem;">📝 <i>${a.opis || 'Brak opisu'}</i></div>
-        </div>
-    `).join("");
+.user-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.badge {
+    background-color: #0284c7;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+/* EKRAN ALARMOWY REMIZY */
+.alarm-box {
+    background-color: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.alarm-active {
+    border-color: #ef4444;
+    background-color: #450a0a;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.stats-box {
+    display: flex;
+    justify-content: space-around;
+    background-color: #0f172a;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+}
+
+.historia-item {
+    background-color: #0f172a;
+    border-left: 4px solid #ef4444;
+    padding: 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.historia-naglowek {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #94a3b8;
 }
