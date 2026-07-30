@@ -32,7 +32,7 @@ let ostatnioOdtworzonyID = null;
 let odebraneAlarmy = [];
 let zalogowanyUzytkownik = null;
 
-// IDENTYFIKATOR UŻYTKOWNIKA PRZEGLĄDARKI (DLA DEKLARACJI UDZIAŁU W ALARMIE)
+// IDENTYFIKATOR UŻYTKOWNIKA PRZEGLĄDARKI
 let myUserId = localStorage.getItem("strazak_id");
 if (!myUserId) {
     myUserId = "strazak_" + Math.random().toString(36).substr(2, 9);
@@ -131,21 +131,62 @@ document.querySelectorAll(".back").forEach(btn => {
     };
 });
 
-// LOGOWANIE OBSŁUGUJĄCE ZARÓWNO /pin JAK I /weryfikacja
-document.getElementById("loginBtn").onclick = async () => {
-    const wpisanaWartosc = document.getElementById("pin").value.trim();
+// ========================================================
+// 1. KAFELEK 1: LOGOWANIE STAŁYM PINEM (/pin)
+// ========================================================
+document.getElementById("loginPinBtn").onclick = async () => {
+    const wpisanyPin = document.getElementById("pin").value.trim();
     const errorEl = document.getElementById("loginError");
     
-    errorEl.innerHTML = "Weryfikacja...";
+    errorEl.innerHTML = "Sprawdzanie PIN-u...";
 
-    if (!wpisanaWartosc) {
-        errorEl.innerHTML = "Wpisz PIN lub kod weryfikacyjny!";
+    if (!wpisanyPin) {
+        errorEl.innerHTML = "Wpisz swój 6-cyfrowy PIN!";
         return;
     }
 
     try {
-        // 1. Sprawdzamy czy wpisano jednorazowy kod z /weryfikacja
-        const snapKod = await getDoc(doc(db, "kody_weryfikacyjne", wpisanaWartosc));
+        const snapshotUzytkownicy = await getDocs(collection(db, "uzytkownicy_osp"));
+        let znalezionyUzytkownik = null;
+
+        snapshotUzytkownicy.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (data.pin && data.pin.toString().trim() === wpisanyPin) {
+                znalezionyUzytkownik = data;
+            }
+        });
+
+        if (znalezionyUzytkownik) {
+            zalogowanyUzytkownik = {
+                discordId: znalezionyUzytkownik.discordId,
+                nazwa: znalezionyUzytkownik.nazwa
+            };
+            pomyślneLogowanie();
+        } else {
+            errorEl.innerHTML = "❌ Nieprawidłowy PIN!";
+        }
+    } catch (e) {
+        console.error("Błąd logowania PIN-em:", e);
+        errorEl.innerHTML = "Błąd połączenia z bazą danych.";
+    }
+};
+
+// ========================================================
+// 2. KAFELEK 2: LOGOWANIE KODEM JEDNORAZOWYM (/weryfikacja)
+// ========================================================
+document.getElementById("loginKodBtn").onclick = async () => {
+    const wpisanyKod = document.getElementById("pin").value.trim();
+    const errorEl = document.getElementById("loginError");
+
+    errorEl.innerHTML = "Weryfikowanie kodu...";
+
+    if (!wpisanyKod) {
+        errorEl.innerHTML = "Wpisz kod z /weryfikacja!";
+        return;
+    }
+
+    try {
+        const snapKod = await getDoc(doc(db, "kody_weryfikacyjne", wpisanyKod));
 
         if (snapKod.exists()) {
             const daneKodu = snapKod.data();
@@ -158,33 +199,11 @@ document.getElementById("loginBtn").onclick = async () => {
                 nazwa: daneKodu.nazwa
             };
             pomyślneLogowanie();
-            return;
+        } else {
+            errorEl.innerHTML = "❌ Błędny kod weryfikacyjny!";
         }
-
-        // 2. Szukamy wpisanego PIN-u wśród wszystkich zarejestrowanych użytkowników (/pin)
-        const snapshotUzytkownicy = await getDocs(collection(db, "uzytkownicy_osp"));
-        let znalezionyUzytkownik = null;
-
-        snapshotUzytkownicy.forEach((doc) => {
-            const data = doc.data();
-            if (data.pin && data.pin.toString().trim() === wpisanaWartosc) {
-                znalezionyUzytkownik = data;
-            }
-        });
-
-        if (znalezionyUzytkownik) {
-            zalogowanyUzytkownik = {
-                discordId: znalezionyUzytkownik.discordId,
-                nazwa: znalezionyUzytkownik.nazwa
-            };
-            pomyślneLogowanie();
-            return;
-        }
-
-        errorEl.innerHTML = "❌ Nieprawidłowy PIN lub kod!";
-
     } catch (e) {
-        console.error("Błąd logowania:", e);
+        console.error("Błąd logowania Kodem:", e);
         errorEl.innerHTML = "Błąd połączenia z bazą danych.";
     }
 };
@@ -197,7 +216,7 @@ function pomyślneLogowanie() {
     document.getElementById("loginError").innerHTML = "";
 }
 
-// POBIERANIE CZASU ZGŁOSZENIA (GODZINA:MINUTA)
+// POBIERANIE CZASU ZGŁOSZENIA
 function getObecnaGodzina() {
     const teraz = new Date();
     return teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
@@ -237,7 +256,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 };
 
-// DEKLAROWANIE WYJAZDU Przez STRAŻAKÓW (BIORĘ UDZIAŁ / NIE MOGĘ)
+// DEKLAROWANIE WYJAZDU Przez STRAŻAKÓW
 window.zglaszReakcje = async (alarmId, status) => {
     try {
         const alarmRef = doc(db, "alarmy", alarmId);
@@ -272,7 +291,7 @@ setInterval(() => {
     }
 }, 1000);
 
-// PRZELICZANIE STATYSTYK WYJAZDÓW
+// STATYSTYKI WYJAZDÓW
 function aktualizujStatystyki() {
     let countP = 0, countMZ = 0, countPNZR = 0, countC = 0;
 
@@ -309,7 +328,7 @@ function renderujEremize() {
     const najnowszy = odebraneAlarmy[0];
     const teraz = Date.now();
     const czasOdWyslania = teraz - (najnowszy.created || 0);
-    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund trwania aktywnego wywołania
+    const CZAS_TRWANIA_ALARMU = 30000;
 
     let aktywnyZdarzenie = null;
     let historiaZdarzen = [];
@@ -322,7 +341,6 @@ function renderujEremize() {
         historiaZdarzen = odebraneAlarmy;
     }
 
-    // --- AKTYWNE ZDARZENIE ---
     if (aktywnyZdarzenie) {
         const wyswietlanyCzas = aktywnyZdarzenie.czasNadania || "Brak daty"; 
         const reakcje = aktywnyZdarzenie.reakcje || {};
@@ -368,7 +386,6 @@ function renderujEremize() {
         wylaczActiveAlarm();
     }
 
-    // --- HISTORIA ZDARZEŃ ---
     if (historiaZdarzen.length === 0) {
         historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
     } else {
