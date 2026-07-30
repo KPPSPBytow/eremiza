@@ -20,24 +20,20 @@
         <button id="btnRemiza">🚒 E-Remiza</button>
     </div>
 
-    <!-- LOGOWANIE DYŻURNEGO (DWA KAFELKI / SEKCJE - OPCJA A) -->
+    <!-- LOGOWANIE DYŻURNEGO (PODWÓJNA WERYFIKACJA: PIN + KOD) -->
     <div id="pinBox" class="okno hidden">
         <h2>🔑 Logowanie Dyżurnego</h2>
+        <p style="text-align: center; color: #aaa; margin-bottom: 20px; font-size: 14px;">
+            Podaj swój stały PIN oraz jednorazowy kod z komendy <code>/weryfikacja</code>.
+        </p>
 
-        <!-- KAFELEK 1: STAŁY PIN -->
-        <div class="login-subbox">
-            <h3>📌 Stały PIN (/pin)</h3>
-            <input type="password" id="inputPin" placeholder="Wpisz Twój PIN z bota">
-            <button id="loginPinBtn">Zaloguj PIN-em</button>
-        </div>
+        <label for="inputPin">📌 Stały PIN (/pin)</label>
+        <input type="password" id="inputPin" placeholder="Wpisz swój PIN">
 
-        <!-- KAFELEK 2: KOD WERYFIKACJI -->
-        <div class="login-subbox" style="margin-top: 20px;">
-            <h3>🔐 Kod jednorazowy (/weryfikacja)</h3>
-            <input type="text" id="inputKod" placeholder="Wpisz 4-cyfrowy Kod z bota" autocomplete="off">
-            <button id="loginKodBtn" class="btn-blue">Zaloguj Kodem</button>
-        </div>
+        <label for="inputKod">🔐 Kod weryfikacyjny (/weryfikacja)</label>
+        <input type="text" id="inputKod" placeholder="Wpisz 4-cyfrowy Kod" autocomplete="off">
 
+        <button id="loginBtn">Zaloguj do Panelu</button>
         <button class="back">Powrót</button>
         <p id="loginError"></p>
     </div>
