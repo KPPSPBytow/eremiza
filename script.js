@@ -129,84 +129,68 @@ document.querySelectorAll(".back").forEach(btn => {
     };
 });
 
-// LOGOWANIE - 1. LOGOWANIE STAŁYM PIN-EM (/pin)
-document.getElementById("loginPinBtn").onclick = async () => {
-    const inputPin = document.getElementById("inputPin").value.trim();
+// LOGOWANIE PODWÓJNE (PIN + KOD)
+document.getElementById("loginBtn").onclick = async () => {
+    const wpisanyPin = document.getElementById("inputPin").value.trim();
+    const wpisanyKod = document.getElementById("inputKod").value.trim();
     const errorEl = document.getElementById("loginError");
-    
-    errorEl.innerHTML = "Weryfikacja PIN-u...";
 
-    if (!inputPin) {
-        errorEl.innerHTML = "Proszę wpisać PIN!";
+    errorEl.innerHTML = "Weryfikacja danych...";
+
+    if (!wpisanyPin || !wpisanyKod) {
+        errorEl.innerHTML = "❌ Podaj ZARÓWNO PIN, JAK I KOD!";
         return;
     }
 
     try {
-        const snapshotUzytkownicy = await getDocs(collection(db, "uzytkownicy_osp"));
-        let znaleziony = null;
+        // 1. Sprawdź Kod Weryfikacyjny z komendy /weryfikacja
+        const snapKod = await getDoc(doc(db, "kody_weryfikacyjne", wpisanyKod));
 
-        snapshotUzytkownicy.forEach((docSnap) => {
-            const data = docSnap.data();
-            if (data.pin && data.pin.toString().trim() === inputPin) {
-                znaleziony = data;
-            }
-        });
-
-        if (znaleziony) {
-            zalogowanyUzytkownik = znaleziony;
-            sukcesLogowania();
-        } else {
-            errorEl.innerHTML = "❌ Niepoprawny PIN!";
+        if (!snapKod.exists()) {
+            errorEl.innerHTML = "❌ Niepoprawny Kod weryfikacyjny!";
+            return;
         }
+
+        const daneKodu = snapKod.data();
+
+        if (Date.now() > daneKodu.waznyDo) {
+            errorEl.innerHTML = "❌ Kod weryfikacyjny wygasł!";
+            return;
+        }
+
+        // 2. Pobierz konto tego użytkownika i sprawdź jego Stały PIN
+        const snapUzytkownik = await getDoc(doc(db, "uzytkownicy_osp", daneKodu.discordId));
+
+        if (!snapUzytkownik.exists()) {
+            errorEl.innerHTML = "❌ Nie znaleziono konta użytkownika dla tego kodu!";
+            return;
+        }
+
+        const daneUzytkownika = snapUzytkownik.data();
+
+        if (daneUzytkownika.pin.toString().trim() !== wpisanyPin) {
+            errorEl.innerHTML = "❌ Niepoprawny PIN dla tego konta!";
+            return;
+        }
+
+        // Zalogowano pomyślnie!
+        zalogowanyUzytkownik = {
+            nazwa: daneUzytkownika.nazwa || daneKodu.nazwa,
+            discordId: daneKodu.discordId
+        };
+
+        ukryj();
+        dyzurny.classList.remove("hidden");
+        trybStrony = "dyzurny";
+        document.getElementById("inputPin").value = "";
+        document.getElementById("inputKod").value = "";
+        errorEl.innerHTML = "";
+
     } catch (e) {
-        console.error("Błąd logowania PIN-em:", e);
-        errorEl.innerHTML = "Błąd bazy danych.";
+        console.error("Błąd podczas logowania:", e);
+        errorEl.innerHTML = "Błąd połączenia z bazą danych.";
     }
 };
-
-// LOGOWANIE - 2. LOGOWANIE KODEM WERYFIKACYJNYM (/weryfikacja)
-document.getElementById("loginKodBtn").onclick = async () => {
-    const inputKod = document.getElementById("inputKod").value.trim();
-    const errorEl = document.getElementById("loginError");
-
-    errorEl.innerHTML = "Sprawdzanie kodu...";
-
-    if (!inputKod) {
-        errorEl.innerHTML = "Proszę wpisać Kod!";
-        return;
-    }
-
-    try {
-        const snapKod = await getDoc(doc(db, "kody_weryfikacyjne", inputKod));
-
-        if (snapKod.exists()) {
-            const data = snapKod.data();
-            if (Date.now() > data.waznyDo) {
-                errorEl.innerHTML = "❌ Kod wygasł!";
-                return;
-            }
-            zalogowanyUzytkownik = {
-                nazwa: data.nazwa,
-                discordId: data.discordId
-            };
-            sukcesLogowania();
-        } else {
-            errorEl.innerHTML = "❌ Niepoprawny kod weryfikacyjny!";
-        }
-    } catch (e) {
-        console.error("Błąd logowania Kodem:", e);
-        errorEl.innerHTML = "Błąd bazy danych.";
-    }
-};
-
-function sukcesLogowania() {
-    ukryj();
-    dyzurny.classList.remove("hidden");
-    trybStrony = "dyzurny";
-    document.getElementById("inputPin").value = "";
-    document.getElementById("inputKod").value = "";
-    document.getElementById("loginError").innerHTML = "";
-}
 
 // FORMATOWANIE DATY
 function getObecnaDataGodzina() {
