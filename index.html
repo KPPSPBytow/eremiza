@@ -1,99 +1,110 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Remiza OSP</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-    <div class="container">
-        <!-- MENU GŁÓWNE -->
-        <div id="menu" class="card">
-            <h1>🚒 E-Remiza OSP</h1>
-            <p>Wybierz tryb pracy:</p>
-            <div class="button-group">
-                <button id="btnDyzurny" class="btn primary">Panel Dyżurnego</button>
-                <button id="btnRemiza" class="btn secondary">Ekran Remizy</button>
-            </div>
-        </div>
+    <header>
+        <h1>🚒 SYSTEM ALARMOWANIA OSP 🚒</h1>
+    </header>
 
-        <!-- FORMULARZ LOGOWANIA (PIN + KOD) -->
-        <div id="pinBox" class="card hidden">
-            <h2>🔑 Logowanie Dyżurnego</h2>
-            <p>Podaj Twój stały PIN oraz jednorazowy kod z Discorda (`/weryfikacja`)</p>
-            
-            <div class="form-group">
-                <label for="inputPin">Stały PIN dyżurnego:</label>
-                <input type="password" id="inputPin" placeholder="np. 123456" maxlength="6">
-            </div>
-
-            <div class="form-group">
-                <label for="inputKod">Jednorazowy kod z Discorda:</label>
-                <input type="text" id="inputKod" placeholder="np. 4321" maxlength="4">
-            </div>
-
-            <div id="loginError" class="error-msg"></div>
-
-            <div class="button-group">
-                <button id="loginBtn" class="btn primary">Zaloguj się</button>
-                <button class="btn back">Cofnij</button>
-            </div>
-        </div>
-
-        <!-- PANEL DYŻURNEGO -->
-        <div id="dyzurnyPanel" class="card hidden">
-            <div class="header-user">
-                <h2>👨‍🚒 Panel Dyżurnego</h2>
-                <span id="zalogowanyUserBadge" class="badge"></span>
-            </div>
-
-            <div class="form-group">
-                <label for="rodzaj">Rodzaj zdarzenia:</label>
-                <select id="rodzaj">
-                    <option value="MZ">Miejscowe Zagrożenie (MZ)</option>
-                    <option value="P">Pożar (P)</option>
-                    <option value="AF">Alarm Fałszywy (AF)</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="podrodzaj">Podrodzaj zdarzenia:</label>
-                <select id="podrodzaj"></select>
-            </div>
-
-            <div class="form-group">
-                <label for="lokalizacja">Lokalizacja:</label>
-                <input type="text" id="lokalizacja" placeholder="Miejscowość, ulica, numer...">
-            </div>
-
-            <div class="form-group">
-                <label for="opis">Opis zdarzenia:</label>
-                <textarea id="opis" rows="3" placeholder="Szczegóły zgłoszenia..."></textarea>
-            </div>
-
-            <div class="button-group">
-                <button id="alarmBtn" class="btn danger">🚨 WYŚLIJ ALARM</button>
-                <button class="btn back">Wyloguj</button>
-            </div>
-        </div>
-
-        <!-- EKRAN REMIZY -->
-        <div id="remizaPanel" class="card hidden">
-            <h2>📺 Stanowisko Alarmowe OSP</h2>
-            
-            <div id="alarm" class="alarm-box">
-                <h3>Brak aktywnego alarmu</h3>
-            </div>
-
-            <h3>📜 Historia Zdarzeń</h3>
-            <div id="historiaAlarmow" class="historia-container"></div>
-
-            <button class="btn back" style="margin-top: 15px;">Cofnij</button>
-        </div>
+    <!-- MENU -->
+    <div id="menu" class="menu">
+        <button id="btnDyzurny">👮 Panel Dyżurnego</button>
+        <button id="btnRemiza">🚒 E-Remiza</button>
     </div>
 
+    <!-- PIN -->
+    <div id="pinBox" class="okno hidden">
+        <h2>Logowanie Dyżurnego</h2>
+        <input type="password" id="pin" placeholder="Podaj PIN">
+        <button id="loginBtn">Zaloguj</button>
+        <button class="back">Powrót</button>
+        <p id="loginError"></p>
+    </div>
+
+    <!-- PANEL DYŻURNEGO -->
+    <div id="dyzurnyPanel" class="okno hidden">
+        <h2>Nowe Zdarzenie</h2>
+
+        <label>Rodzaj zdarzenia</label>
+        <select id="rodzaj">
+            <option value="MZ">MZ (Miejscowe Zagrożenie)</option>
+            <option value="P">P (Pożar)</option>
+            <option value="PNZR">PNZR (Przekazanie Na Zabezpieczenie Rejonu)</option>
+            <option value="Ć">Ć (Ćwiczenia)</option>
+        </select>
+
+        <label id="lblPodrodzaj">Podrodzaj zdarzenia</label>
+        <select id="podrodzaj">
+            <!-- Dynamicznie wypełniane przez JS -->
+        </select>
+
+        <label>Lokalizacja</label>
+        <input type="text" id="lokalizacja" placeholder="np. Bytów ul. Leśna 12">
+
+        <label>Opis</label>
+        <textarea id="opis" rows="6" placeholder="Opis zdarzenia..."></textarea>
+
+        <button id="alarmBtn">🚨 Alarmuj OSP</button>
+        <button class="back">Powrót</button>
+    </div>
+
+    <!-- E-REMIZA -->
+    <div id="remizaPanel" class="okno hidden">
+        <h2>🚒 E-Remiza</h2>
+
+        <!-- 1. AKTYWNY ALARM (GÓRA) -->
+        <div id="alarm">
+            <h3>Brak aktywnego alarmu</h3>
+        </div>
+
+        <!-- 2. HISTORIA ALARMÓW (ŚRODEK) -->
+        <h2 style="margin-top: 30px;">📜 Historia alarmów</h2>
+        <div id="historiaAlarmow">
+            <div class="historia-pusta">Brak zapisanych alarmów.</div>
+        </div>
+
+        <hr style="margin:25px 0; border:1px solid #333;">
+
+        <!-- 3. PODSUMOWANIE / STATYSTYKI WYJAZDÓW (DÓŁ) -->
+        <div class="statystyki-roczne">
+            <h3>📊 Statystyki Wyjazdowe OSP</h3>
+            <div class="stat-grid">
+                <div class="stat-card total">
+                    <span class="stat-liczba" id="statRazem">0</span>
+                    <span class="stat-etykieta">Suma wyjazdów</span>
+                </div>
+                <div class="stat-card pozar">
+                    <span class="stat-liczba" id="statP">0</span>
+                    <span class="stat-etykieta">Pożary (P)</span>
+                </div>
+                <div class="stat-card mz">
+                    <span class="stat-liczba" id="statMZ">0</span>
+                    <span class="stat-etykieta">Miejscowe Zagr. (MZ)</span>
+                </div>
+                <div class="stat-card pnzr">
+                    <span class="stat-liczba" id="statPNZR">0</span>
+                    <span class="stat-etykieta"> Zabezpieczenia Rejonu (PNZR)</span>
+                </div>
+                <div class="stat-card cwiczenia">
+                    <span class="stat-liczba" id="statC">0</span>
+                    <span class="stat-etykieta">Ćwiczenia (Ć)</span>
+                </div>
+            </div>
+        </div>
+
+        <button class="back">Powrót</button>
+    </div>
+
+    <!-- Główny skrypt modułowy -->
     <script type="module" src="script.js"></script>
+
 </body>
 </html>
