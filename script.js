@@ -6,10 +6,11 @@ import {
     doc,
     getDoc,
     updateDoc,
-    onSnapshot
+    onSnapshot,
+    getDocs
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
-// FIREBASE CONFIG
+// 1. FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCiEgW5qAv3a61k4F8gXlvSFinHapOY6vU",
   authDomain: "eremiza.firebaseapp.com",
@@ -23,7 +24,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// DŹWIĘK SYRENY
+// 2. DŹWIĘK SYRENY
 const syrena = new Audio("syrena-6.mp3");
 
 let trybStrony = "menu";
@@ -31,7 +32,7 @@ let ostatnioOdtworzonyID = null;
 let odebraneAlarmy = [];
 let zalogowanyUzytkownik = null;
 
-// IDENTYFIKATOR UŻYTKOWNIKA (DLA REAKCJI BEZPOŚREDNIO ZE STRONY)
+// IDENTYFIKATOR UŻYTKOWNIKA PRZEGLĄDARKI (DLA DEKLARACJI UDZIAŁU W ALARMIE)
 let myUserId = localStorage.getItem("strazak_id");
 if (!myUserId) {
     myUserId = "strazak_" + Math.random().toString(36).substr(2, 9);
@@ -130,7 +131,7 @@ document.querySelectorAll(".back").forEach(btn => {
     };
 });
 
-// SYSTEM LOGOWANIA DYŻURNEGO (SPRAWDZA KOLEKCJĘ uzytkownicy_osp ORAZ kody_weryfikacyjne)
+// LOGOWANIE OBSŁUGUJĄCE ZARÓWNO /pin JAK I /weryfikacja
 document.getElementById("loginBtn").onclick = async () => {
     const wpisanaWartosc = document.getElementById("pin").value.trim();
     const errorEl = document.getElementById("loginError");
@@ -143,13 +144,11 @@ document.getElementById("loginBtn").onclick = async () => {
     }
 
     try {
-        // 1. SPRAWDZANIE STAŁEGO PIN-u W KOLEKCJI uzytkownicy_osp
-        const userDocRef = doc(db, "uzytkownicy_osp", wpisanaWartosc); 
-        // LUB sprawdzamy w całej kolekcji czy istnieje pole pin == wpisanaWartosc:
-        const snapKody = await getDoc(doc(db, "kody_weryfikacyjne", wpisanaWartosc));
+        // 1. Sprawdzamy czy wpisano jednorazowy kod z /weryfikacja
+        const snapKod = await getDoc(doc(db, "kody_weryfikacyjne", wpisanaWartosc));
 
-        if (snapKody.exists()) {
-            const daneKodu = snapKody.data();
+        if (snapKod.exists()) {
+            const daneKodu = snapKod.data();
             if (Date.now() > daneKodu.waznyDo) {
                 errorEl.innerHTML = "❌ Kod jednorazowy wygasł!";
                 return;
@@ -162,13 +161,21 @@ document.getElementById("loginBtn").onclick = async () => {
             return;
         }
 
-        // Jeśli to nie był kod jednorazowy, przeszukujemy dokumenty użytkowników pod kątem PINu
-        const userDocDirect = await getDoc(doc(db, "uzytkownicy_osp", wpisanaWartosc));
-        if (userDocDirect.exists()) {
-            const uData = userDocDirect.data();
+        // 2. Szukamy wpisanego PIN-u wśród wszystkich zarejestrowanych użytkowników (/pin)
+        const snapshotUzytkownicy = await getDocs(collection(db, "uzytkownicy_osp"));
+        let znalezionyUzytkownik = null;
+
+        snapshotUzytkownicy.forEach((doc) => {
+            const data = doc.data();
+            if (data.pin && data.pin.toString().trim() === wpisanaWartosc) {
+                znalezionyUzytkownik = data;
+            }
+        });
+
+        if (znalezionyUzytkownik) {
             zalogowanyUzytkownik = {
-                discordId: uData.discordId,
-                nazwa: uData.nazwa
+                discordId: znalezionyUzytkownik.discordId,
+                nazwa: znalezionyUzytkownik.nazwa
             };
             pomyślneLogowanie();
             return;
@@ -190,13 +197,13 @@ function pomyślneLogowanie() {
     document.getElementById("loginError").innerHTML = "";
 }
 
-// FORMATOWANIE CZASU
+// POBIERANIE CZASU ZGŁOSZENIA (GODZINA:MINUTA)
 function getObecnaGodzina() {
     const teraz = new Date();
     return teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
 }
 
-// NADAWANIE ALARMU (Bot sam wyłapie zmianę w Firebase i wyśle powiadomienie z Embedem)
+// NADAWANIE ALARMU
 document.getElementById("alarmBtn").onclick = async () => {
     const rodzaj = selectRodzaj.value;
     const podrodzaj = selectPodrodzaj.value;
@@ -221,7 +228,7 @@ document.getElementById("alarmBtn").onclick = async () => {
             reakcje: {}
         });
 
-        alert("🚨 Alarm nadany! Powiadomienie zostało wysłane na Discorda.");
+        alert("🚨 Alarm wysłany! Powiadomienie trafia na Discorda.");
         document.getElementById("lokalizacja").value = "";
         document.getElementById("opis").value = "";
     } catch (error) {
@@ -230,7 +237,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 };
 
-// DEKLAROWANIE WYJAZDU / BRAKU UDZIAŁU
+// DEKLAROWANIE WYJAZDU Przez STRAŻAKÓW (BIORĘ UDZIAŁ / NIE MOGĘ)
 window.zglaszReakcje = async (alarmId, status) => {
     try {
         const alarmRef = doc(db, "alarmy", alarmId);
@@ -242,7 +249,7 @@ window.zglaszReakcje = async (alarmId, status) => {
     }
 };
 
-// NASŁUCHIWANIE BAZY DATA NA STRONIE
+// SYNCHRONIZACJA BAZY W CZASIE RZECZYWISTYM
 const alarmyRef = collection(db, "alarmy");
 
 onSnapshot(alarmyRef, (snapshot) => {
@@ -256,7 +263,7 @@ onSnapshot(alarmyRef, (snapshot) => {
     renderujEremize();
     aktualizujStatystyki();
 }, (error) => {
-    console.error("Błąd Firebase na stronie:", error);
+    console.error("Błąd połączenia Firebase:", error);
 });
 
 setInterval(() => {
@@ -265,7 +272,7 @@ setInterval(() => {
     }
 }, 1000);
 
-// STATYSTYKI
+// PRZELICZANIE STATYSTYK WYJAZDÓW
 function aktualizujStatystyki() {
     let countP = 0, countMZ = 0, countPNZR = 0, countC = 0;
 
@@ -289,20 +296,20 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE PANELU E-REMIZA
+// RENDEROWANIE WIDOKU REMIZY
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
     if (odebraneAlarmy.length === 0) {
         wylaczActiveAlarm();
-        historiaBox.innerHTML = `<div class="historia-pusta">Brak zapisanych alarmów.</div>`;
+        historiaBox.innerHTML = `<div class="historia-pusta">Brak zapisanych alarmów w historii.</div>`;
         return;
     }
 
     const najnowszy = odebraneAlarmy[0];
     const teraz = Date.now();
     const czasOdWyslania = teraz - (najnowszy.created || 0);
-    const CZAS_TRWANIA_ALARMU = 30000;
+    const CZAS_TRWANIA_ALARMU = 30000; // 30 sekund trwania aktywnego wywołania
 
     let aktywnyZdarzenie = null;
     let historiaZdarzen = [];
@@ -315,6 +322,7 @@ function renderujEremize() {
         historiaZdarzen = odebraneAlarmy;
     }
 
+    // --- AKTYWNE ZDARZENIE ---
     if (aktywnyZdarzenie) {
         const wyswietlanyCzas = aktywnyZdarzenie.czasNadania || "Brak daty"; 
         const reakcje = aktywnyZdarzenie.reakcje || {};
@@ -354,14 +362,15 @@ function renderujEremize() {
         if (trybStrony === "remiza" && ostatnioOdtworzonyID !== aktywnyZdarzenie.id) {
             ostatnioOdtworzonyID = aktywnyZdarzenie.id;
             syrena.currentTime = 0;
-            syrena.play().catch(err => console.log("Audio zablokowane: ", err));
+            syrena.play().catch(err => console.log("Odtwarzanie audio wstrzymane przez przeglądarkę: ", err));
         }
     } else {
         wylaczActiveAlarm();
     }
 
+    // --- HISTORIA ZDARZEŃ ---
     if (historiaZdarzen.length === 0) {
-        historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów.</div>`;
+        historiaBox.innerHTML = `<div class="historia-pusta">Brak starszych alarmów w historii.</div>`;
     } else {
         historiaBox.innerHTML = historiaZdarzen.map(item => {
             const czasItem = item.czasNadania || "Brak godziny";
