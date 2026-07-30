@@ -132,16 +132,16 @@ document.querySelectorAll(".back").forEach(btn => {
 });
 
 // ========================================================
-// 1. KAFELEK 1: LOGOWANIE STAŁYM PINEM (/pin)
+// OBSŁUGA KAFELKA 1: STAŁY PIN (/pin)
 // ========================================================
 document.getElementById("loginPinBtn").onclick = async () => {
-    const wpisanyPin = document.getElementById("pin").value.trim();
+    const wpisanyPin = document.getElementById("inputPin").value.trim();
     const errorEl = document.getElementById("loginError");
     
     errorEl.innerHTML = "Sprawdzanie PIN-u...";
 
     if (!wpisanyPin) {
-        errorEl.innerHTML = "Wpisz swój 6-cyfrowy PIN!";
+        errorEl.innerHTML = "Wpisz swój PIN!";
         return;
     }
 
@@ -172,10 +172,10 @@ document.getElementById("loginPinBtn").onclick = async () => {
 };
 
 // ========================================================
-// 2. KAFELEK 2: LOGOWANIE KODEM JEDNORAZOWYM (/weryfikacja)
+// OBSŁUGA KAFELKA 2: KOD JEDNORAZOWY (/weryfikacja)
 // ========================================================
 document.getElementById("loginKodBtn").onclick = async () => {
-    const wpisanyKod = document.getElementById("pin").value.trim();
+    const wpisanyKod = document.getElementById("inputKod").value.trim();
     const errorEl = document.getElementById("loginError");
 
     errorEl.innerHTML = "Weryfikowanie kodu...";
@@ -212,7 +212,8 @@ function pomyślneLogowanie() {
     ukryj();
     dyzurny.classList.remove("hidden");
     trybStrony = "dyzurny";
-    document.getElementById("pin").value = "";
+    document.getElementById("inputPin").value = "";
+    document.getElementById("inputKod").value = "";
     document.getElementById("loginError").innerHTML = "";
 }
 
