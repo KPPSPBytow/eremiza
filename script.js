@@ -302,7 +302,7 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY (Z ZABEZPIECZENIEM TIMERA 30S)
+// RENDEROWANIE E-REMIZY (ODPORNE NA DESYNCHRONIZACJĘ ZEGARÓW)
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
@@ -322,8 +322,9 @@ function renderujEremize() {
     const createdTimestamp = najnowszy.created || 0;
     const roznica = teraz - createdTimestamp;
 
-    // Tolerancja do 5 minut różnicy zegara systemowego (roznica >= -300000)
-    if (createdTimestamp > 0 && (roznica < CZAS_TRWANIA_ALARMU && roznica >= -300000)) {
+    // NAPRAWIONE: Brak dolnego limitu sprawdzania (roznica < CZAS_TRWANIA_ALARMU)
+    // Dzięki temu różnice czasowe między urządzeniami nie powodują przeskakiwania do historii
+    if (createdTimestamp > 0 && roznica < CZAS_TRWANIA_ALARMU) {
         aktywnyZdarzenie = najnowszy;
         historiaZdarzen = odebraneAlarmy.slice(1);
     }
