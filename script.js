@@ -5,10 +5,7 @@ import {
     addDoc,
     doc,
     getDoc,
-    onSnapshot,
-    query,
-    where,
-    getDocs
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 // KONFIGURACJA FIREBASE
@@ -25,10 +22,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const syrena = new Audio("syrena-6.mp3");
-
 let odebraneAlarmy = [];
-let zalogowanyUzytkownik = null; // Zachowuje dane o zweryfikowanym druhu
+let zalogowanyUzytkownik = null;
 
 const podrodzajeMZ = ["Atmosferyczne", "Drogowe", "Poszukiwawcze", "Pomoc PRM/Policji", "Inne MZ"];
 const podrodzajeP = ["Mieszkalne", "Uprawy/Trawy", "Pojazdy", "Obiekty", "Inne Pożary"];
@@ -93,7 +88,7 @@ document.getElementById("loginBtn").onclick = async () => {
             return;
         }
 
-        // 2. Sprawdzamy, czy do tego ID Discorda przypisany jest podany PIN
+        // 2. Sprawdzamy PIN użytkownika
         const userSnap = await getDoc(doc(db, "uzytkownicy_osp", daneKodu.discordId));
         if (!userSnap.exists() || userSnap.data().pin !== wpisanyPin) {
             errorEl.innerHTML = "❌ Podany PIN nie pasuje do użytkownika!";
@@ -103,7 +98,7 @@ document.getElementById("loginBtn").onclick = async () => {
         // Sukces logowania
         zalogowanyUzytkownik = {
             discordId: daneKodu.discordId,
-            nazwa: daneKodu.nazwa
+            nazwa: daneKodu.nazwa || userSnap.data().nazwa || "Nieznany"
         };
 
         document.getElementById("zalogowanyUserBadge").textContent = `Zalogowany: ${zalogowanyUzytkownik.nazwa}`;
@@ -131,9 +126,9 @@ document.getElementById("alarmBtn").onclick = async () => {
             rodzaj: selectRodzaj.value,
             podrodzaj: selectPodrodzaj.value,
             lokalizacja: lokalizacja,
-            opis: opis,
-            dyzurny: zalogowanyUzytkownik.nazwa,
-            discordId: zalogowanyUzytkownik.discordId, // Kluczowe do pingowania!
+            opis: opis || "Brak dodatkowego opisu.",
+            dyzurny: zalogowanyUzytkownik ? zalogowanyUzytkownik.nazwa : "Dyżurny",
+            discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : "",
             czasNadania: new Date().toLocaleTimeString("pl-PL", {hour: '2-digit', minute:'2-digit'}),
             created: Date.now()
         });
@@ -169,24 +164,25 @@ function renderujRemize() {
     if (czyKrotko) {
         alarmBox.className = "alarm-box alarm-active";
         alarmBox.innerHTML = `
-            <h2>🚨 AKTYWNE ZDARZENIE #${najnowszy.id} 🚨</h2>
+            <h2>🚨 AKTYWNE ZDARZENIE 🚨</h2>
             <p><b>Rodzaj:</b> ${najnowszy.rodzaj} (${najnowszy.podrodzaj})</p>
             <p><b>Lokalizacja:</b> ${najnowszy.lokalizacja}</p>
-            <p><b>Zgłaszający:</b> <@${najnowszy.discordId}> (${najnowszy.dyzurny})</p>
+            <p><b>Opis:</b> ${najnowszy.opis}</p>
         `;
     } else {
         alarmBox.className = "alarm-box";
         alarmBox.innerHTML = "<h3>Brak aktywnego alarmu</h3>";
     }
 
+    // CZYSZCZENIE HISTORII: Usunięto ID oraz Dyżurnego, dodano Opis!
     historiaBox.innerHTML = odebraneAlarmy.map(a => `
         <div class="historia-item">
             <div class="historia-naglowek">
-                <span><b>${a.rodzaj}</b> (${a.podrodzaj})</span>
-                <span>${a.czasNadania}</span>
+                <span><b>${a.rodzaj}</b> (${a.podrodzaj || 'Standard'})</span>
+                <span>⏰ ${a.czasNadania}</span>
             </div>
-            <div>📍 ${a.lokalizacja}</div>
-            <small>ID: ${a.id} | Zgłosił: ${a.dyzurny}</small>
+            <div style="margin-top: 5px;">📍 <b>${a.lokalizacja}</b></div>
+            <div style="margin-top: 5px; color: #cbd5e1; font-size: 0.9rem;">📝 <i>${a.opis || 'Brak opisu'}</i></div>
         </div>
     `).join("");
 }
