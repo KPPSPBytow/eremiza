@@ -322,8 +322,8 @@ function renderujEremize() {
     const createdTimestamp = najnowszy.created || 0;
     const roznica = teraz - createdTimestamp;
 
-    // POPRAWIONY WARUNEK: Tolerancja 10s na desynchronizację zegarków (roznica >= -10000)
-    if (createdTimestamp > 0 && (roznica < CZAS_TRWANIA_ALARMU && roznica >= -10000)) {
+    // Tolerancja do 5 minut różnicy zegara systemowego (roznica >= -300000)
+    if (createdTimestamp > 0 && (roznica < CZAS_TRWANIA_ALARMU && roznica >= -300000)) {
         aktywnyZdarzenie = najnowszy;
         historiaZdarzen = odebraneAlarmy.slice(1);
     }
