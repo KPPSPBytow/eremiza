@@ -7,7 +7,8 @@ import {
     getDoc,
     getDocs,
     updateDoc,
-    onSnapshot
+    onSnapshot,
+    serverTimestamp // 👈 CZAS Z SERWERA FIREBASE
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 // FIREBASE CONFIG
@@ -143,7 +144,6 @@ document.getElementById("loginBtn").onclick = async () => {
     }
 
     try {
-        // 1. Sprawdź Kod Weryfikacyjny z komendy /weryfikacja
         const snapKod = await getDoc(doc(db, "kody_weryfikacyjne", wpisanyKod));
 
         if (!snapKod.exists()) {
@@ -158,7 +158,6 @@ document.getElementById("loginBtn").onclick = async () => {
             return;
         }
 
-        // 2. Pobierz konto tego użytkownika i sprawdź jego Stały PIN
         const snapUzytkownik = await getDoc(doc(db, "uzytkownicy_osp", daneKodu.discordId));
 
         if (!snapUzytkownik.exists()) {
@@ -173,7 +172,6 @@ document.getElementById("loginBtn").onclick = async () => {
             return;
         }
 
-        // Zalogowano pomyślnie!
         zalogowanyUzytkownik = {
             nazwa: daneUzytkownika.nazwa || daneKodu.nazwa,
             discordId: daneKodu.discordId
@@ -198,7 +196,7 @@ function getObecnaDataGodzina() {
     return teraz.toLocaleDateString("pl-PL") + ", " + teraz.toLocaleTimeString("pl-PL", { hour: '2-digit', minute: '2-digit' });
 }
 
-// WYSYŁANIE ALARMU
+// WYSYŁANIE ALARMU (UŻYWA TERAZ SERVER TIMESTAMP)
 document.getElementById("alarmBtn").onclick = async () => {
     const rodzaj = selectRodzaj.value;
     const podrodzaj = selectPodrodzaj.value;
@@ -206,7 +204,6 @@ document.getElementById("alarmBtn").onclick = async () => {
     const opis = document.getElementById("opis").value.trim();
     
     const czasNadania = getObecnaDataGodzina(); 
-    const timestampZwykly = Date.now(); 
 
     if (!lokalizacja) {
         alert("Podaj lokalizację zdarzenia!");
@@ -222,7 +219,7 @@ document.getElementById("alarmBtn").onclick = async () => {
             dyzurny: zalogowanyUzytkownik ? zalogowanyUzytkownik.nazwa : "Dyżurny",
             discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : null,
             czasNadania: czasNadania,
-            created: timestampZwykly,
+            created: serverTimestamp(), // 👈 UŻYWAMY CZASU Z SERWERA FIREBASE!
             reakcje: {}
         });
 
@@ -255,11 +252,22 @@ onSnapshot(
     (snapshot) => {
         const lista = [];
         snapshot.forEach((doc) => {
-            lista.push({ id: doc.id, ...doc.data() });
+            const data = doc.data();
+            // Konwersja czasu z Firebase (serverTimestamp) na milisekundowe Timestampy
+            let createdMs = 0;
+            if (data.created && typeof data.created.toMillis === "function") {
+                createdMs = data.created.toMillis();
+            } else if (typeof data.created === "number") {
+                createdMs = data.created;
+            } else {
+                createdMs = Date.now(); // Dla nowych dokumentów jeszcze bez potwierdzenia z serwera
+            }
+
+            lista.push({ id: doc.id, ...data, createdMs: createdMs });
         });
 
-        // Sortowanie z obsługą braku pola 'created'
-        lista.sort((a, b) => (b.created || 0) - (a.created || 0));
+        // Sortowanie najnowszych alarmów
+        lista.sort((a, b) => b.createdMs - a.createdMs);
         odebraneAlarmy = lista;
         renderujEremize();
         aktualizujStatystyki();
@@ -302,7 +310,7 @@ function aktualizujStatystyki() {
     if (elC) elC.textContent = countC;
 }
 
-// RENDEROWANIE E-REMIZY (ODPORNE NA DESYNCHRONIZACJĘ ZEGARÓW)
+// RENDEROWANIE E-REMIZY
 function renderujEremize() {
     if (!alarmBox || !historiaBox) return;
 
@@ -319,11 +327,11 @@ function renderujEremize() {
     let historiaZdarzen = [...odebraneAlarmy];
 
     const najnowszy = odebraneAlarmy[0];
-    const createdTimestamp = najnowszy.created || 0;
+    const createdTimestamp = najnowszy.createdMs || 0;
     const roznica = teraz - createdTimestamp;
 
-    // NAPRAWIONE: Brak dolnego limitu sprawdzania (roznica < CZAS_TRWANIA_ALARMU)
-    // Dzięki temu różnice czasowe między urządzeniami nie powodują przeskakiwania do historii
+    // AKTYWNY ALARM: Tylko jeśli od wysłania minęło MNIEJ niż 30 sekund
+    // LUB jeśli zegar komputera jest nieco cofnięty (roznica < 0)
     if (createdTimestamp > 0 && roznica < CZAS_TRWANIA_ALARMU) {
         aktywnyZdarzenie = najnowszy;
         historiaZdarzen = odebraneAlarmy.slice(1);
