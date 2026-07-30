@@ -204,6 +204,7 @@ document.getElementById("alarmBtn").onclick = async () => {
     const opis = document.getElementById("opis").value.trim();
     
     const czasNadania = getObecnaDataGodzina(); 
+    const terazMs = Date.now(); // Pewna pieczątka do dokładnego sortowania
 
     if (!lokalizacja) {
         alert("Podaj lokalizację zdarzenia!");
@@ -211,14 +212,14 @@ document.getElementById("alarmBtn").onclick = async () => {
     }
 
     try {
-        // 1. Zawiadom bazę, że wszystkie poprzednie alarmy przestały być aktywne
+        // 1. Oznacz wszystkie starsze jako nieaktywne
         odebraneAlarmy.forEach(async (a) => {
             if (a.isAktywny) {
                 await updateDoc(doc(db, "alarmy", a.id), { isAktywny: false });
             }
         });
 
-        // 2. Dodaj nowy alarm ze stanem isAktywny = true
+        // 2. Dodaj nowy alarm
         const docRef = await addDoc(collection(db, "alarmy"), {
             rodzaj: rodzaj,
             podrodzaj: podrodzaj,
@@ -227,6 +228,7 @@ document.getElementById("alarmBtn").onclick = async () => {
             dyzurny: zalogowanyUzytkownik ? zalogowanyUzytkownik.nazwa : "Dyżurny",
             discordId: zalogowanyUzytkownik ? zalogowanyUzytkownik.discordId : null,
             czasNadania: czasNadania,
+            timestamp: terazMs, // 👈 Klucz do poprawnej kolejności
             created: serverTimestamp(),
             isAktywny: true,
             reakcje: {}
@@ -236,7 +238,7 @@ document.getElementById("alarmBtn").onclick = async () => {
         document.getElementById("lokalizacja").value = "";
         document.getElementById("opis").value = "";
 
-        // 3. Po 30 sekundach wygaszamy stan aktywnego alarmu w bazie
+        // 3. Po 30s wygaś aktywnego
         setTimeout(async () => {
             try {
                 await updateDoc(doc(db, "alarmy", docRef.id), { isAktywny: false });
@@ -274,13 +276,11 @@ onSnapshot(
             lista.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        // STABILNE SORTOWANIE (Najnowsze na samej górze)
+        // PRECYZYJNE SORTOWANIE CHRONOLOGICZNE (od najnowszego do najstarszego)
         lista.sort((a, b) => {
-            // Jeśli dokument jest nowy i nie ma jeszcze przypisanego czasu serwera, dany element traktujemy jako najświeższy
-            const tA = a.created && a.created.toMillis ? a.created.toMillis() : Number.MAX_SAFE_INTEGER;
-            const tB = b.created && b.created.toMillis ? b.created.toMillis() : Number.MAX_SAFE_INTEGER;
-            
-            return tB - tA; // Od największej (najnowszej) wartości do najmniejszej
+            const czasA = a.timestamp || (a.created && a.created.toMillis ? a.created.toMillis() : 0);
+            const czasB = b.timestamp || (b.created && b.created.toMillis ? b.created.toMillis() : 0);
+            return czasB - czasA;
         });
 
         odebraneAlarmy = lista;
@@ -329,10 +329,7 @@ function renderujEremize() {
         return;
     }
 
-    // Szukamy aktywnego alarmu
     const aktywnyZdarzenie = odebraneAlarmy.find(item => item.isAktywny === true);
-    
-    // Do historii trafiają wszystkie alarmy, które NIE są aktywne (kolejność chronologiczna zostaje zachowana z sortowania)
     const historiaZdarzen = odebraneAlarmy.filter(item => item.isAktywny !== true);
 
     // --- RENDEROWANIE AKTYWNEGO ALARMU ---
