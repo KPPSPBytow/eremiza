@@ -1,189 +1,111 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
-const { initializeApp } = require('firebase/app');
-const { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } = require('firebase/firestore');
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System E-Remiza OSP</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-// 1. DOKŁADNA KONFIGURACJA FIREBASE
-const firebaseConfig = {
-  apiKey: "AIzaSyCiEgW5qAv3a61k4F8gXlvSFinHapOY6vU",
-  authDomain: "eremiza.firebaseapp.com",
-  projectId: "eremiza",
-  storageBucket: "eremiza.firebasestorage.app",
-  messagingSenderId: "304527774904",
-  appId: "1:304527774904:web:e32d405d1ef339b190904d",
-  measurementId: "G-Y7LWEKCF4H"
-};
+    <div class="container">
+        <!-- EKRAN GŁÓWNY / MENU -->
+        <div id="menu" class="card">
+            <h1>👨‍🚒 SYSTEM E-REMIZA OSP</h1>
+            <p class="subtitle">Wybierz tryb dostępu:</p>
+            <div class="button-group">
+                <button id="btnDyzurny" class="btn btn-primary">🛡️ Panel Dyżurnego (Nadawanie)</button>
+                <button id="btnRemiza" class="btn btn-secondary">📺 Ekran Remizy / Odsłuch</button>
+            </div>
+        </div>
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
+        <!-- EKRAN LOGOWANIA (PIN + KOD) -->
+        <div id="pinBox" class="card hidden">
+            <h2>🔐 Logowanie Dyżurnego</h2>
+            <p class="info-text">Aby się zalogować, podaj swój **PIN** (`/pin`) oraz aktualny **Kod Weryfikacyjny** (`/weryfikacja`).</p>
+            
+            <div class="form-group">
+                <label for="inputPin">Osobisty PIN dyżurnego:</label>
+                <input type="password" id="inputPin" placeholder="Wpisz Twój PIN z Discorda">
+            </div>
 
-// 2. ID KANAŁÓW DISCORD
-const ID_KANALU_ALARMOWEGO = "1532296652549783612"; // Kanał, gdzie bot wysyła alarmy
-const ID_KANALU_WERYFIKACJI = "1532300122270994534"; // Jedyny kanał, gdzie działają /pin i /weryfikacja
+            <div class="form-group">
+                <label for="inputKod">Kod z komendy /weryfikacja:</label>
+                <input type="text" id="inputKod" placeholder="4-cyfrowy kod z Discorda" maxlength="4">
+            </div>
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+            <div id="loginError" class="error-msg"></div>
 
-// REJESTRACJA KOMEND SLASH
-const commands = [
-    new SlashCommandBuilder()
-        .setName('pin')
-        .setDescription('Generuje Twój stały PIN dyżurnego OSP'),
-    new SlashCommandBuilder()
-        .setName('weryfikacja')
-        .setDescription('Generuje jednorazowy kod logowania do panelu E-Remiza')
-].map(cmd => cmd.toJSON());
+            <div class="button-group">
+                <button id="loginBtn" class="btn btn-success">Zaloguj się</button>
+                <button class="btn btn-back back">Wróć</button>
+            </div>
+        </div>
 
-// PODCZAS URUCHOMIENIA BOTA
-client.on('ready', async () => {
-    console.log(`🤖 Bot E-Remiza został uruchomiony jako: ${client.user.tag}`);
-    
-    // Rejestracja komend slash
-    const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
-    try {
-        await rest.put(
-            Routes.applicationCommands(client.user.id),
-            { body: commands }
-        );
-        console.log('✅ Komendy /pin oraz /weryfikacja zostały zarejestrowane w API Discorda!');
-    } catch (error) {
-        console.error('❌ Błąd rejestracji komend:', error);
-    }
+        <!-- PANEL DYŻURNEGO (Tylko po zalogowaniu) -->
+        <div id="dyzurnyPanel" class="card hidden">
+            <div class="user-header">
+                <h2>🚨 Panel Nadawania Alarmu</h2>
+                <span id="zalogowanyUserBadge" class="badge">Zalogowany jako: Loading...</span>
+            </div>
 
-    // NASŁUCHIWANIE NOWYCH ALARMÓW W FIREBASE
-    startNasluchiwaniaAlarmow();
-});
+            <div class="form-group">
+                <label for="rodzaj">Rodzaj zdarzenia:</label>
+                <select id="rodzaj">
+                    <option value="MZ">MZ - Miejscowe Zagrożenie</option>
+                    <option value="P">P - Pożar</option>
+                    <option value="PNZR">PNZR - Pozostałe</option>
+                    <option value="Ć">Ć - Ćwiczenia</option>
+                </select>
+            </div>
 
-// FUNKCJA POWIADAMIAJĄCA O NOWYCH ALARMACH NA DISCORDZIE
-let czyPierwszeLadowanie = true;
+            <div class="form-group">
+                <label for="podrodzaj">Podrodzaj zdarzenia:</label>
+                <select id="podrodzaj">
+                    <!-- Wypełniane dynamicznie przez script.js -->
+                </select>
+            </div>
 
-function startNasluchiwaniaAlarmow() {
-    const alarmyCollection = collection(db, "alarmy");
+            <div class="form-group">
+                <label for="lokalizacja">Lokalizacja zdarzenia:</label>
+                <input type="text" id="lokalizacja" placeholder="np. ul. Strażacka 12, Racibórz">
+            </div>
 
-    onSnapshot(alarmyCollection, (snapshot) => {
-        if (czyPierwszeLadowanie) {
-            czyPierwszeLadowanie = false;
-            return;
-        }
+            <div class="form-group">
+                <label for="opis">Opis zdarzenia / Uwagi:</label>
+                <textarea id="opis" rows="3" placeholder="Dodatkowe informacje dotyczące zdarzenia..."></textarea>
+            </div>
 
-        snapshot.docChanges().forEach(async (change) => {
-            if (change.type === "added") {
-                const alarm = change.doc.data();
-                const alarmId = change.doc.id;
+            <div class="button-group">
+                <button id="alarmBtn" class="btn btn-danger">🚨 WYSŁIJ ALARM DLA OSP</button>
+                <button class="btn btn-back back">Wyloguj i wróć</button>
+            </div>
+        </div>
 
-                const kanal = client.channels.cache.get(ID_KANALU_ALARMOWEGO);
-                if (!kanal) {
-                    console.error(`❌ Nie znaleziono kanału alarmowego o ID: ${ID_KANALU_ALARMOWEGO}`);
-                    return;
-                }
+        <!-- EKRAN REMIZY (Podgląd live & statystyki) -->
+        <div id="remizaPanel" class="card hidden">
+            <button class="btn btn-back back top-back">Wróć do menu</button>
+            
+            <div id="alarm" class="alarm-box">
+                <h3>Brak aktywnego alarmu</h3>
+            </div>
 
-                // Oznaczenie zgłaszającego
-                const dyzurnyMention = alarm.discordId ? `<@${alarm.discordId}>` : `**${alarm.dyzurny || "Nieokreślony"}**`;
-                
-                // Budowanie ramki (Embed)
-                const embed = {
-                    color: 0xdc2626,
-                    title: `🚨 ALARM BOJOWY OSP – ZDARZENIE #${alarmId}`,
-                    description: `Został nadany nowy alarm w panelu **E-Remiza**!`,
-                    fields: [
-                        { name: "🆔 ID Zdarzenia (Firestore):", value: `\`${alarmId}\``, inline: true },
-                        { name: "👨‍🚒 Dyżurny / Nadawca:", value: dyzurnyMention, inline: true },
-                        { name: "🔥 Rodzaj zdarzenia:", value: `${alarm.rodzaj} (${alarm.podrodzaj || "Standard"})`, inline: false },
-                        { name: "📍 Lokalizacja:", value: `**${alarm.lokalizacja}**`, inline: false },
-                        { name: "📝 Opis zdarzenia:", value: `${alarm.opis || "Brak dodatkowego opisu."}`, inline: false },
-                        { name: "⏰ Czas zgłoszenia:", value: `${alarm.czasNadania}`, inline: false }
-                    ],
-                    footer: { text: "System Alarmowania E-Remiza OSP" },
-                    timestamp: new Date()
-                };
+            <!-- STATYSTYKI -->
+            <div class="stats-box">
+                <div class="stat-item">Razem: <b id="statRazem">0</b></div>
+                <div class="stat-item">Pożary (P): <b id="statP">0</b></div>
+                <div class="stat-item">Miejscowe (MZ): <b id="statMZ">0</b></div>
+                <div class="stat-item">Ćwiczenia (Ć): <b id="statC">0</b></div>
+            </div>
 
-                await kanal.send({ 
-                    content: `🚨 **ALARM DLA STRAŻAKÓW!** @everyone`, 
-                    embeds: [embed] 
-                });
+            <h3>📜 Historia Zdarzeń</h3>
+            <div id="historiaAlarmow" class="historia-list">
+                <div class="historia-pusta">Ładowanie bazy danych...</div>
+            </div>
+        </div>
+    </div>
 
-                console.log(`✅ Wysłano powiadomienie o alarmie #${alarmId}`);
-            }
-        });
-    });
-}
-
-// OBSŁUGA KOMEND /PIN ORAZ /WERYFIKACJA
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
-    // BLOKADA: Sprawdzenie czy komenda została wpisana na dozwolonym kanale
-    if (interaction.channelId !== ID_KANALU_WERYFIKACJI) {
-        return interaction.reply({
-            content: `❌ Tej komendy możesz użyć tylko na kanale: <#${ID_KANALU_WERYFIKACJI}>!`,
-            ephemeral: true
-        });
-    }
-
-    const userId = interaction.user.id;
-    const userTag = interaction.user.globalName || interaction.user.username;
-
-    // --- KOMENDA /PIN ---
-    if (interaction.commandName === 'pin') {
-        try {
-            const userRef = doc(db, "uzytkownicy_osp", userId);
-            const userSnap = await getDoc(userRef);
-
-            if (userSnap.exists()) {
-                return interaction.reply({ 
-                    content: `🔑 Twój stały PIN dyżurnego to: **${userSnap.data().pin}**`, 
-                    ephemeral: true 
-                });
-            }
-
-            const nowyPin = Math.floor(100000 + Math.random() * 900000).toString();
-
-            await setDoc(userRef, {
-                discordId: userId,
-                nazwa: userTag,
-                pin: nowyPin,
-                utworzono: Date.now()
-            });
-
-            interaction.reply({ 
-                content: `✅ Zarejestrowano Cię w systemie E-Remiza!\nTwój stały PIN dyżurnego: **${nowyPin}**`, 
-                ephemeral: true 
-            });
-        } catch (e) {
-            console.error("Błąd bazy danych:", e);
-            interaction.reply({ content: "❌ Błąd bazy danych Firebase.", ephemeral: true });
-        }
-    }
-
-    // --- KOMENDA /WERYFIKACJA ---
-    if (interaction.commandName === 'weryfikacja') {
-        try {
-            const userRef = doc(db, "uzytkownicy_osp", userId);
-            const userSnap = await getDoc(userRef);
-
-            if (!userSnap.exists()) {
-                return interaction.reply({ 
-                    content: "❌ Nie masz jeszcze przypisanego PINu! Użyj najpierw komendy `/pin`.", 
-                    ephemeral: true 
-                });
-            }
-
-            const kodJednorazowy = Math.floor(1000 + Math.random() * 9000).toString();
-
-            await setDoc(doc(db, "kody_weryfikacyjne", kodJednorazowy), {
-                discordId: userId,
-                nazwa: userTag,
-                waznyDo: Date.now() + (5 * 60 * 1000)
-            });
-
-            interaction.reply({ 
-                content: `🔓 Twój kod logowania do panelu: **${kodJednorazowy}**\n*(Kod wygaśnie automatycznie za 5 minut)*`, 
-                ephemeral: true 
-            });
-        } catch (e) {
-            console.error("Błąd bazy danych:", e);
-            interaction.reply({ content: "❌ Błąd generowania kodu weryfikacyjnego.", ephemeral: true });
-        }
-    }
-});
-
-// LOGOWANIE BOTA
-client.login(process.env.BOT_TOKEN);
+    <!-- SKRYPT FIREBASE & LOGIKA -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
