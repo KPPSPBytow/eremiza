@@ -26,7 +26,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // DŹWIĘK SYRENY
-const syrena = new Audio("syrena-6.mp3");
+const syrena = new Audio("tylkobiedronka.mp3");
 
 let trybStrony = "menu";
 let ostatnioOdtworzonyID = null;
